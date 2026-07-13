@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>RateDial — find your best electricity plan</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root{
+  --ink:#1B2430;
+  --ink-soft:#3A4453;
+  --paper:#F7F5F0;
+  --paper-dim:#EEEAE1;
+  --brass:#E8A33D;
+  --brass-dark:#B87F26;
+  --teal:#3E7C6B;
+  --rust:#C1503D;
+  --line: rgba(27,36,48,0.14);
+  --card: #FFFFFF;
+  --radius: 10px;
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background: var(--paper);
+  color: var(--ink);
+  font-family:'Inter', sans-serif;
+  -webkit-font-smoothing:antialiased;
+  padding: 28px 20px 60px;
+}
+
+.wrap{max-width:1180px;margin:0 auto;}
+
+/* ---------- Header ---------- */
+header.top{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:24px;
+  border-bottom:3px solid var(--ink);
+  padding-bottom:18px;
+  margin-bottom:28px;
+  flex-wrap:wrap;
+}
+.brand-eyebrow{
+  font-family:'IBM Plex Mono', monospace;
+  font-size:11px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color: var(--brass-dark);
+  margin:0 0 6px 0;
+  font-weight:600;
+}
+h1.brand{
+  font-family:'Roboto Slab', serif;
+  font-weight:700;
+  font-size:clamp(30px,4vw,44px);
+  margin:0;
+  letter-spacing:-0.01em;
+  line-height:1;
+}
+h1.brand span{color:var(--brass-dark);}
+.tagline{
+  font-family:'Inter', sans-serif;
+  font-size:14.5px;
+  color:var(--ink-soft);
+  max-width:360px;
+  text-align:right;
+  line-height:1.45;
+  margin:0;
+}
+
+/* ---------- Layout grid ---------- */
+.grid{
+  display:grid;
+  grid-template-columns: 1fr 1.35fr;
+  gap:22px;
+  align-items:start;
+}
+@media (max-width:860px){ .grid{grid-template-columns:1fr;} }
+
+.panel{
+  background: var(--card);
+  border:1px solid var(--line);
+  border-radius: var(--radius);
+  padding:22px 22px 24px;
+}
+
+.panel-title{
+  font-family:'IBM Plex Mono', monospace;
+  font-size:11.5px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--ink-soft);
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:0 0 16px 0;
+  padding-bottom:10px;
+  border-bottom:1px solid var(--line);
+}
+.panel-title .num{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:18px;height:18px;border-radius:50%;
+  background:var(--ink); color:var(--paper);
+  font-size:10px; font-weight:600;
+}
+
+label.field-label{
+  display:block;
+  font-size:12.5px;
+  font-weight:600;
+  color:var(--ink-soft);
+  margin:14px 0 5px;
+}
+label.field-label:first-child{margin-top:0;}
+
+input[type="number"], input[type="text"], select{
+  width:100%;
+  padding:9px 10px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  font-family:'IBM Plex Mono', monospace;
+  font-size:13.5px;
+  background:var(--paper);
+  color:var(--ink);
+}
+input[type="text"]{font-family:'Inter',sans-serif;}
+input:focus, select:focus{
+  outline:2px solid var(--brass);
+  outline-offset:1px;
+}
+
+.hint{font-size:11.5px;color:#7A8291;margin-top:4px;line-height:1.4;}
+
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+
+/* toggle pills */
+.pillrow{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;}
+.pill{
+  font-family:'IBM Plex Mono', monospace;
+  font-size:11.5px;
+  padding:6px 12px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  background:var(--paper);
+  cursor:pointer;
+  user-select:none;
+}
+.pill.active{background:var(--ink); color:var(--paper); border-color:var(--ink);}
+
+.slider-wrap{margin-top:6px;}
+input[type="range"]{width:100%; accent-color:var(--brass-dark);}
+.slider-val{font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--ink-soft); margin-top:2px;}
+
+/* seasonal month grid */
+.months{
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  gap:6px;
+  margin-top:8px;
+}
+.months .m{display:flex;flex-direction:column;gap:3px;}
+.months label{font-size:10px;color:#8A8F98;font-family:'IBM Plex Mono',monospace;text-align:center;}
+.months input{padding:6px 4px; font-size:11.5px; text-align:center;}
+
+/* ---------- Plan cards ---------- */
+.market-banner{
+  margin-top:14px; padding:14px 16px; border-radius:8px; font-size:13px; line-height:1.5;
+  display:none;
+}
+.market-banner.show{display:block;}
+.market-banner.deregulated{background:rgba(62,124,107,0.12); border:1px solid rgba(62,124,107,0.35); color:var(--ink);}
+.market-banner.regulated{background:rgba(193,80,61,0.1); border:1px solid rgba(193,80,61,0.3); color:var(--ink);}
+.market-banner.unknown{background:var(--paper-dim); border:1px solid var(--line); color:var(--ink);}
+.market-banner b{display:block; font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px;}
+.zip-badge{
+  display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:9.5px; text-transform:uppercase;
+  letter-spacing:.05em; background:var(--brass); color:var(--ink); padding:2px 7px; border-radius:999px;
+  margin-left:8px; vertical-align:middle; font-weight:600;
+}
+.spinner{
+  display:inline-block; width:12px; height:12px; border:2px solid rgba(255,255,255,0.4);
+  border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; margin-right:6px; vertical-align:-1px;
+}
+@keyframes spin{ to { transform:rotate(360deg); } }
+
+.plan-card{
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:16px 16px 14px;
+  margin-bottom:14px;
+  background:linear-gradient(180deg, #FFFFFF, #FCFBF8);
+  position:relative;
+}
+.plan-card .plan-head{
+  display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:4px;
+}
+.plan-name-input{font-family:'Roboto Slab',serif; font-weight:600; font-size:16px; border:none; background:transparent; padding:2px 0; width:100%;}
+.plan-name-input:focus{outline:none; border-bottom:1px solid var(--brass);}
+.remove-btn{
+  font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--rust);
+  background:none;border:1px solid var(--rust); border-radius:6px; padding:4px 8px; cursor:pointer;
+  white-space:nowrap;
+}
+.remove-btn:hover{background:var(--rust); color:#fff;}
+
+.type-select{margin-top:8px;}
+
+.type-fields{
+  margin-top:12px;
+  padding-top:12px;
+  border-top:1px dashed var(--line);
+}
+
+.add-plan-btn{
+  width:100%;
+  padding:12px;
