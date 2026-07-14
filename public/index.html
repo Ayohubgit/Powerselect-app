@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>RateDial — find your best electricity plan</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root{
+  --ink:#1B2430;
+  --ink-soft:#3A4453;
+  --paper:#F7F5F0;
+  --paper-dim:#EEEAE1;
+  --brass:#E8A33D;
+  --brass-dark:#B87F26;
+  --teal:#3E7C6B;
+  --rust:#C1503D;
+  --line: rgba(27,36,48,0.14);
+  --card: #FFFFFF;
+  --radius: 10px;
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background: var(--paper);
+  color: var(--ink);
+  font-family:'Inter', sans-serif;
+  -webkit-font-smoothing:antialiased;
+  padding: 28px 20px 60px;
+}
+
+.wrap{max-width:1180px;margin:0 auto;}
+
+/* ---------- Header ---------- */
+header.top{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:24px;
+  border-bottom:3px solid var(--ink);
+  padding-bottom:18px;
+  margin-bottom:28px;
+  flex-wrap:wrap;
+}
+.brand-eyebrow{
+  font-family:'IBM Plex Mono', monospace;
+  font-size:11px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color: var(--brass-dark);
+  margin:0 0 6px 0;
+  font-weight:600;
+}
+h1.brand{
+  font-family:'Roboto Slab', serif;
+  font-weight:700;
+  font-size:clamp(30px,4vw,44px);
+  margin:0;
+  letter-spacing:-0.01em;
+  line-height:1;
+}
+h1.brand span{color:var(--brass-dark);}
+.tagline{
+  font-family:'Inter', sans-serif;
+  font-size:14.5px;
+  color:var(--ink-soft);
+  max-width:360px;
+  text-align:right;
+  line-height:1.45;
+  margin:0;
+}
+
+/* ---------- Layout grid ---------- */
+.grid{
+  display:grid;
+  grid-template-columns: 1fr 1.35fr;
+  gap:22px;
+  align-items:start;
+}
+@media (max-width:860px){ .grid{grid-template-columns:1fr;} }
+
+.panel{
+  background: var(--card);
+  border:1px solid var(--line);
+  border-radius: var(--radius);
+  padding:22px 22px 24px;
+}
+
+.panel-title{
+  font-family:'IBM Plex Mono', monospace;
+  font-size:11.5px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--ink-soft);
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:0 0 16px 0;
+  padding-bottom:10px;
+  border-bottom:1px solid var(--line);
+}
+.panel-title .num{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:18px;height:18px;border-radius:50%;
+  background:var(--ink); color:var(--paper);
+  font-size:10px; font-weight:600;
+}
+
+label.field-label{
+  display:block;
+  font-size:12.5px;
+  font-weight:600;
+  color:var(--ink-soft);
+  margin:14px 0 5px;
+}
+label.field-label:first-child{margin-top:0;}
+
+input[type="number"], input[type="text"], select{
+  width:100%;
+  padding:9px 10px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  font-family:'IBM Plex Mono', monospace;
+  font-size:13.5px;
+  background:var(--paper);
+  color:var(--ink);
+}
+input[type="text"]{font-family:'Inter',sans-serif;}
+input:focus, select:focus{
+  outline:2px solid var(--brass);
+  outline-offset:1px;
+}
+
+.hint{font-size:11.5px;color:#7A8291;margin-top:4px;line-height:1.4;}
+
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+
+/* toggle pills */
+.pillrow{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;}
+.pill{
+  font-family:'IBM Plex Mono', monospace;
+  font-size:11.5px;
+  padding:6px 12px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  background:var(--paper);
+  cursor:pointer;
+  user-select:none;
+}
+.pill.active{background:var(--ink); color:var(--paper); border-color:var(--ink);}
+
+.slider-wrap{margin-top:6px;}
+input[type="range"]{width:100%; accent-color:var(--brass-dark);}
+.slider-val{font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--ink-soft); margin-top:2px;}
+
+/* seasonal month grid */
+.months{
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  gap:6px;
+  margin-top:8px;
+}
+.months .m{display:flex;flex-direction:column;gap:3px;}
+.months label{font-size:10px;color:#8A8F98;font-family:'IBM Plex Mono',monospace;text-align:center;}
+.months input{padding:6px 4px; font-size:11.5px; text-align:center;}
+
+/* ---------- Plan cards ---------- */
+.market-banner{
+  margin-top:14px; padding:14px 16px; border-radius:8px; font-size:13px; line-height:1.5;
+  display:none;
+}
+.market-banner.show{display:block;}
+.market-banner.deregulated{background:rgba(62,124,107,0.12); border:1px solid rgba(62,124,107,0.35); color:var(--ink);}
+.market-banner.regulated{background:rgba(193,80,61,0.1); border:1px solid rgba(193,80,61,0.3); color:var(--ink);}
+.market-banner.unknown{background:var(--paper-dim); border:1px solid var(--line); color:var(--ink);}
+.market-banner b{display:block; font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px;}
+.zip-badge{
+  display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:9.5px; text-transform:uppercase;
+  letter-spacing:.05em; background:var(--brass); color:var(--ink); padding:2px 7px; border-radius:999px;
+  margin-left:8px; vertical-align:middle; font-weight:600;
+}
+.spinner{
+  display:inline-block; width:12px; height:12px; border:2px solid rgba(255,255,255,0.4);
+  border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; margin-right:6px; vertical-align:-1px;
+}
+@keyframes spin{ to { transform:rotate(360deg); } }
+
+.plan-card{
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:16px 16px 14px;
+  margin-bottom:14px;
+  background:linear-gradient(180deg, #FFFFFF, #FCFBF8);
+  position:relative;
+}
+.plan-card .plan-head{
+  display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:4px;
+}
+.plan-name-input{font-family:'Roboto Slab',serif; font-weight:600; font-size:16px; border:none; background:transparent; padding:2px 0; width:100%;}
+.plan-name-input:focus{outline:none; border-bottom:1px solid var(--brass);}
+.remove-btn{
+  font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--rust);
+  background:none;border:1px solid var(--rust); border-radius:6px; padding:4px 8px; cursor:pointer;
+  white-space:nowrap;
+}
+.remove-btn:hover{background:var(--rust); color:#fff;}
+
+.type-select{margin-top:8px;}
+
+.type-fields{
+  margin-top:12px;
+  padding-top:12px;
+  border-top:1px dashed var(--line);
+}
+
+.add-plan-btn{
+  width:100%;
+  padding:12px;
+  border:2px dashed var(--brass-dark);
+  border-radius:8px;
+  background:none;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:12.5px;
+  color:var(--brass-dark);
+  font-weight:600;
+  letter-spacing:.03em;
+  cursor:pointer;
+  text-transform:uppercase;
+}
+.add-plan-btn:hover{background:rgba(232,163,61,0.1);}
+
+.small-note-row{display:flex; gap:14px; margin-top:12px; flex-wrap:wrap;}
+.checkfield{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-soft); font-family:'IBM Plex Mono',monospace;}
+
+/* ---------- Toolbar ---------- */
+.toolbar{
+  display:flex; gap:10px; margin-bottom:18px; flex-wrap:wrap; align-items:center;
+}
+.btn{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:12px; font-weight:600; letter-spacing:.02em;
+  padding:10px 18px; border-radius:7px; cursor:pointer; border:1px solid var(--ink);
+  text-transform:uppercase;
+}
+.btn.primary{background:var(--ink); color:var(--paper);}
+.btn.primary:hover{background:#00000000; background:var(--brass-dark); border-color:var(--brass-dark); color:#fff;}
+.btn.ghost{background:none;color:var(--ink); }
+.btn.ghost:hover{background:var(--paper-dim);}
+.save-status{font-family:'IBM Plex Mono',monospace; font-size:11px; color:#8A8F98;}
+
+/* ---------- Results ---------- */
+.results-section{margin-top:26px;}
+.results-top{
+  display:grid; grid-template-columns: 260px 1fr; gap:24px; align-items:center;
+  background:var(--ink); color:var(--paper);
+  border-radius:var(--radius);
+  padding:26px;
+  margin-bottom:20px;
+}
+@media (max-width:760px){ .results-top{grid-template-columns:1fr;} }
+
+.gauge-caption{font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--brass); text-align:center; margin-top:6px;}
+.winner-name{font-family:'Roboto Slab',serif; font-weight:700; font-size:22px; margin:0 0 4px;}
+.winner-sub{font-size:13px; color:#C7CCD6; margin:0 0 16px;}
+.odometer{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:38px; font-weight:600;
+  letter-spacing:.02em;
+  color:var(--brass);
+  font-variant-numeric: tabular-nums;
+}
+.odometer .unit{font-size:15px; color:#C7CCD6; margin-left:8px; font-weight:400;}
+.winner-meta{display:flex; gap:18px; margin-top:14px; flex-wrap:wrap;}
+.winner-meta div{font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#C7CCD6;}
+.winner-meta b{color:var(--paper); display:block; font-size:15px; font-family:'Inter',sans-serif; font-weight:600;}
+
+.rank-list{display:flex; flex-direction:column; gap:10px;}
+.rank-row{
+  display:grid; grid-template-columns: 26px 1.4fr 1fr auto; gap:14px; align-items:center;
+  background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px 16px;
+}
+.rank-num{font-family:'Roboto Slab',serif; font-weight:700; font-size:15px; color:var(--ink-soft);}
+.rank-row.is-winner{border-color:var(--brass-dark); box-shadow: inset 3px 0 0 var(--brass-dark);}
+.rank-name{font-weight:600; font-size:14.5px;}
+.rank-tags{font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#8A8F98; margin-top:2px;}
+.bar-track{height:8px; background:var(--paper-dim); border-radius:4px; overflow:hidden;}
+.bar-fill{height:100%; background:var(--brass-dark); border-radius:4px;}
+.rank-row.is-winner .bar-fill{background:var(--teal);}
+.rank-cost{font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:15px; text-align:right; white-space:nowrap;}
+.rank-cost .permo{display:block; font-size:10.5px; font-weight:400; color:#8A8F98;}
+
+.empty-state{
+  text-align:center; padding:40px 20px; color:var(--ink-soft);
+  font-family:'IBM Plex Mono',monospace; font-size:13px;
+}
+
+/* ---------- Tips ---------- */
+.tips-section{margin-top:30px;}
+.tips-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px; margin-top:14px;}
+.tip-card{border:1px solid var(--line); border-radius:8px; padding:16px; background:var(--card);}
+.tip-card .tip-label{font-family:'IBM Plex Mono',monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--brass-dark); font-weight:600; margin-bottom:6px;}
+.tip-card p{font-size:13px; line-height:1.5; color:var(--ink-soft); margin:0;}
+
+footer.foot{
+  margin-top:36px; padding-top:16px; border-top:1px solid var(--line);
+  font-family:'IBM Plex Mono',monospace; font-size:11px; color:#9BA0A8; text-align:center;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <p class="brand-eyebrow">Household energy planner</p>
+      <h1 class="brand">RATE<span>DIAL</span></h1>
+    </div>
+    <p class="tagline">Enter how you use power and the plans you're considering — RateDial estimates your real annual cost on each one, tiers, time-of-use, and fine print included.</p>
+  </header>
+
+  <div class="toolbar">
+    <button class="btn primary" id="calcBtn">Calculate costs</button>
+    <button class="btn ghost" id="saveBtn">Save my setup</button>
+    <button class="btn ghost" id="loadBtn">Load saved setup</button>
+    <button class="btn ghost" id="resetBtn">Reset</button>
+    <span class="save-status" id="saveStatus"></span>
+  </div>
+
+  <div class="panel" style="margin-bottom:22px;">
+    <p class="panel-title"><span class="num">1</span> Find plans in your area</p>
+    <div class="row2" style="align-items:end;">
+      <div>
+        <label class="field-label" style="margin-top:0;">ZIP code</label>
+        <input type="text" id="zipInput" placeholder="e.g. 77002" maxlength="10">
+      </div>
+      <div>
+        <button class="btn primary" id="zipSearchBtn" style="width:100%;">Search providers</button>
+      </div>
+    </div>
+    <p class="hint" id="zipStatus">Looks up whether your area lets you choose a retail provider, and pulls plans to add below — confirm every number with the provider before signing anything.</p>
+    <div id="marketBanner"></div>
+  </div>
+
+  <div class="grid">
+    <!-- USAGE PANEL -->
+    <div class="panel">
+      <p class="panel-title"><span class="num">2</span> Your usage profile</p>
+
+      <label class="field-label">Usage pattern</label>
+      <div class="pillrow" id="usageModePills">
+        <div class="pill active" data-mode="flat">Same every month</div>
+        <div class="pill" data-mode="seasonal">Varies by season</div>
+      </div>
+
+      <div id="flatUsageBlock">
+        <label class="field-label">Average monthly usage (kWh)</label>
+        <input type="number" id="flatUsage" value="1000" min="0" step="10">
+        <p class="hint">Check a recent bill — average U.S. homes use roughly 700–1200 kWh/month, but yours may differ a lot.</p>
+      </div>
+
+      <div id="seasonalUsageBlock" style="display:none;">
+        <label class="field-label">Monthly usage (kWh) — Jan → Dec</label>
+        <div class="months" id="monthsGrid"></div>
+        <div class="pillrow" style="margin-top:10px;">
+          <div class="pill" data-preset="ac">Preset: hot summers (AC)</div>
+          <div class="pill" data-preset="heat">Preset: cold winters (heat)</div>
+          <div class="pill" data-preset="mild">Preset: mild, low swing</div>
+        </div>
+      </div>
+
+      <label class="field-label">Share of usage during peak hours</label>
+      <div class="slider-wrap">
+        <input type="range" id="peakShare" min="0" max="100" value="30">
+        <div class="slider-val"><span id="peakShareVal">30</span>% during peak / <span id="offPeakShareVal">70</span>% off-peak</div>
+      </div>
+      <p class="hint">Only matters for time-of-use plans. Higher if you run AC, laundry, or EV charging during afternoon/evening peak windows.</p>
+    </div>
+
+    <!-- PLANS PANEL -->
+    <div class="panel">
+      <p class="panel-title"><span class="num">3</span> Plans you're comparing</p>
+      <div id="plansContainer"></div>
+      <button class="add-plan-btn" id="addPlanBtn">+ Add a plan</button>
+    </div>
+  </div>
+
+  <div class="results-section" id="resultsSection"></div>
+
+  <div class="tips-section">
+    <p class="panel-title" style="border:none; padding:0;"><span class="num">i</span> What each plan type actually means</p>
+    <div class="tips-grid">
+      <div class="tip-card"><div class="tip-label">Fixed rate</div><p>One rate per kWh for the contract term. Predictable, but shop the base rate against tiered/TOU options — "fixed" isn't automatically cheaper.</p></div>
+      <div class="tip-card"><div class="tip-label">Tiered rate</div><p>Rate increases (or sometimes decreases) after usage crosses a threshold each month. Big or small households are pushed into different tiers — worth modeling with your real usage.</p></div>
+      <div class="tip-card"><div class="tip-label">Time-of-use (TOU)</div><p>Price depends on when you use power, not just how much. Only saves money if you can actually shift usage off peak hours.</p></div>
+      <div class="tip-card"><div class="tip-label">Variable / indexed</div><p>Rate tracks a wholesale index and can change monthly, sometimes sharply. The rate you enter is only an estimate — treat variable plans as higher-risk.</p></div>
+      <div class="tip-card"><div class="tip-label">Early termination fees</div><p>A cheap rate can be a trap if the ETF outweighs the savings from switching again later. Factor the ETF against your expected savings before signing.</p></div>
+      <div class="tip-card"><div class="tip-label">Bill credits</div><p>Credits that only apply above a usage threshold can flip a plan from cheap to expensive if your usage dips below it — common in "free nights" style plans.</p></div>
+    </div>
+  </div>
+
+  <footer class="foot">RateDial estimates costs from the numbers you enter — always confirm exact rates, fees, and terms with the provider before signing.</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- State ----------
+  var state = {
+    usageMode: 'flat',
+    flatUsage: 1000,
+    monthsUsage: [900,850,750,700,750,900,1300,1350,1050,800,800,900], // rough US seasonal default
+    peakSharePct: 30,
+    plans: []
+  };
+
+  var monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  var presets = {
+    ac:    [700,650,650,700,900,1350,1750,1800,1400,850,700,700],
+    heat:  [1500,1400,1100,850,650,550,550,550,600,800,1150,1450],
+    mild:  [850,830,820,820,850,900,950,950,900,850,830,850]
+  };
+
+  function uid(){ return 'p' + Math.random().toString(36).slice(2,9); }
+
+  function defaultPlan(type){
+    var base = {
+      id: uid(),
+      name: 'New plan',
+      type: type || 'fixed',
+      monthlyFee: 6.95,
+      contractMonths: 12,
+      etf: 0,
+      renewablePercent: 0,
+      fixedRate: 0.15,
+      tiers: [ {limit: 500, rate: 0.13}, {limit: 1000, rate: 0.16}, {limit: null, rate: 0.19} ],
+      peakRate: 0.24,
+      offPeakRate: 0.09,
+      creditThreshold: 0,
+      creditAmount: 0
+    };
+    return base;
+  }
+
+  function seedPlans(){
+    state.plans = [
+      Object.assign(defaultPlan('fixed'), {
+        name: 'GreenVolt Fixed 12', monthlyFee: 4.95, contractMonths: 12, etf: 150,
+        renewablePercent: 100, fixedRate: 0.158
+      }),
+      Object.assign(defaultPlan('tiered'), {
+        name: 'MetroPower Standard', monthlyFee: 8.50, contractMonths: 0, etf: 0,
+        renewablePercent: 20,
+        tiers: [ {limit:500, rate:0.121}, {limit:1000, rate:0.149}, {limit:null, rate:0.187} ]
+      }),
+      Object.assign(defaultPlan('tou'), {
+        name: 'PeakShift TOU Saver', monthlyFee: 5.00, contractMonths: 24, etf: 200,
+        renewablePercent: 35, peakRate: 0.27, offPeakRate: 0.085
+      })
+    ];
+  }
+
+  // ---------- Usage helpers ----------
+  function getUsageArray(){
+    if(state.usageMode === 'flat'){
+      var v = state.flatUsage || 0;
+      var arr = [];
+      for(var i=0;i<12;i++) arr.push(v);
+      return arr;
+    }
+    return state.monthsUsage.slice();
+  }
+
+  function totalAnnualUsage(){
+    return getUsageArray().reduce(function(a,b){return a+b;},0);
+  }
+
+  // ---------- Cost calc ----------
+  function tieredMonthCost(u, tiers){
+    var remaining = u, cost = 0, floor = 0;
+    for(var i=0;i<tiers.length;i++){
+      var t = tiers[i];
+      var cap = (t.limit === null || t.limit === undefined || t.limit === '') ? Infinity : Number(t.limit);
+      var bandSize = cap - floor;
+      var used = Math.max(0, Math.min(remaining, bandSize));
+      cost += used * Number(t.rate || 0);
+      remaining -= used;
+      floor = cap;
+      if(remaining <= 0) break;
+    }
+    return cost;
+  }
+
+  function planAnnualCost(plan){
+    var usageArr = getUsageArray();
+    var peakFrac = (state.peakSharePct||0) / 100;
+    var total = 0;
+    for(var i=0;i<usageArr.length;i++){
+      var u = usageArr[i];
+      var monthCost = 0;
+      if(plan.type === 'fixed' || plan.type === 'indexed'){
+        monthCost = u * Number(plan.fixedRate||0);
+      } else if(plan.type === 'tou'){
+        var peak = u * peakFrac, off = u * (1-peakFrac);
+        monthCost = peak * Number(plan.peakRate||0) + off * Number(plan.offPeakRate||0);
+      } else if(plan.type === 'tiered'){
+        monthCost = tieredMonthCost(u, plan.tiers);
+      }
+      monthCost += Number(plan.monthlyFee||0);
+      if(plan.creditThreshold && plan.creditAmount && u >= Number(plan.creditThreshold)){
+        monthCost -= Number(plan.creditAmount);
+      }
+      total += monthCost;
+    }
+    return total;
+  }
+
+  // ---------- Rendering: usage panel ----------
+  function renderMonthsGrid(){
+    var grid = document.getElementById('monthsGrid');
+    grid.innerHTML = '';
+    monthNames.forEach(function(m, idx){
+      var wrap = document.createElement('div');
+      wrap.className = 'm';
+      var label = document.createElement('label');
+      label.textContent = m;
+      var input = document.createElement('input');
+      input.type = 'number'; input.min = 0; input.step = 10;
+      input.value = state.monthsUsage[idx];
+      input.dataset.monthIdx = idx;
+      input.addEventListener('input', function(){
+        state.monthsUsage[idx] = Number(input.value)||0;
+      });
+      wrap.appendChild(label); wrap.appendChild(input);
+      grid.appendChild(wrap);
+    });
+  }
+
+  function setUsageMode(mode){
+    state.usageMode = mode;
+    document.querySelectorAll('#usageModePills .pill').forEach(function(p){
+      p.classList.toggle('active', p.dataset.mode === mode);
+    });
+    document.getElementById('flatUsageBlock').style.display = mode==='flat' ? '' : 'none';
+    document.getElementById('seasonalUsageBlock').style.display = mode==='seasonal' ? '' : 'none';
+  }
+
+  // ---------- Rendering: plan cards ----------
+  function typeFieldsHTML(plan){
+    if(plan.type === 'fixed' || plan.type === 'indexed'){
+      return '' +
+        '<label class="field-label">'+(plan.type==='indexed' ? 'Estimated current rate ($/kWh)' : 'Rate ($/kWh)')+'</label>' +
+        '<input type="number" step="0.001" min="0" class="f-rate" value="'+plan.fixedRate+'">' +
+        (plan.type==='indexed' ? '<p class="hint">Variable/indexed rates can change monthly. This is only an estimate — treat as higher-risk.</p>' : '');
+    }
+    if(plan.type === 'tiered'){
+      var rows = plan.tiers.map(function(t, i){
+        return '<div class="row2" style="margin-top:6px;" data-tier-row="'+i+'">' +
+          '<div><label class="field-label" style="margin:0 0 3px;">Up to (kWh)'+(t.limit===null?' (last tier)':'')+'</label>' +
+          '<input type="number" min="0" class="tier-limit" data-tier="'+i+'" '+(t.limit===null?'disabled placeholder="no limit"':'value="'+t.limit+'"')+'></div>' +
+          '<div><label class="field-label" style="margin:0 0 3px;">Rate ($/kWh)</label>' +
+          '<input type="number" step="0.001" min="0" class="tier-rate" data-tier="'+i+'" value="'+t.rate+'"></div>' +
+          '</div>';
+      }).join('');
+      return '<label class="field-label">Tiers</label>' + rows +
+        '<p class="hint">Each tier applies to the usage band above the previous tier\'s limit, reset monthly.</p>';
+    }
+    if(plan.type === 'tou'){
+      return '<div class="row2">' +
+        '<div><label class="field-label">Peak rate ($/kWh)</label><input type="number" step="0.001" min="0" class="f-peak" value="'+plan.peakRate+'"></div>' +
+        '<div><label class="field-label">Off-peak rate ($/kWh)</label><input type="number" step="0.001" min="0" class="f-offpeak" value="'+plan.offPeakRate+'"></div>' +
+        '</div><p class="hint">Peak/off-peak split for your household is set in the usage panel on the left.</p>';
+    }
+    return '';
+  }
+
+  function planCardHTML(plan){
+    return '' +
+    '<div class="plan-card" data-id="'+plan.id+'">' +
+      '<div class="plan-head">' +
+        '<div style="flex:1; display:flex; align-items:center; min-width:0;">' +
+          '<input type="text" class="plan-name-input" value="'+escapeAttr(plan.name)+'" style="flex:1; min-width:0;">' +
+          (plan.fromZipSearch ? '<span class="zip-badge">from ZIP</span>' : '') +
+        '</div>' +
+        '<button class="remove-btn" data-remove="'+plan.id+'">Remove</button>' +
+      '</div>' +
+      '<select class="type-select">' +
+        '<option value="fixed"'+(plan.type==='fixed'?' selected':'')+'>Fixed rate</option>' +
+        '<option value="tiered"'+(plan.type==='tiered'?' selected':'')+'>Tiered rate</option>' +
+        '<option value="tou"'+(plan.type==='tou'?' selected':'')+'>Time-of-use</option>' +
+        '<option value="indexed"'+(plan.type==='indexed'?' selected':'')+'>Variable / indexed</option>' +
+      '</select>' +
+      '<div class="type-fields">' + typeFieldsHTML(plan) + '</div>' +
+      '<div class="row3" style="margin-top:12px;">' +
+        '<div><label class="field-label" style="margin:0 0 3px;">Monthly base fee ($)</label><input type="number" step="0.01" min="0" class="f-fee" value="'+plan.monthlyFee+'"></div>' +
+        '<div><label class="field-label" style="margin:0 0 3px;">Contract (months)</label><input type="number" min="0" class="f-contract" value="'+plan.contractMonths+'"></div>' +
+        '<div><label class="field-label" style="margin:0 0 3px;">Early term. fee ($)</label><input type="number" min="0" step="1" class="f-etf" value="'+plan.etf+'"></div>' +
+      '</div>' +
+      '<div class="row2" style="margin-top:10px;">' +
+        '<div><label class="field-label" style="margin:0 0 3px;">Renewable content (%)</label><input type="number" min="0" max="100" class="f-renew" value="'+plan.renewablePercent+'"></div>' +
+        '<div><label class="field-label" style="margin:0 0 3px;">Bill credit if usage ≥ (kWh) / amount ($)</label>' +
+          '<div class="row2"><input type="number" min="0" class="f-credit-threshold" value="'+plan.creditThreshold+'" placeholder="threshold"><input type="number" min="0" step="0.5" class="f-credit-amount" value="'+plan.creditAmount+'" placeholder="credit $"></div>' +
+        '</div>' +
+      '</div>' +
+      (plan.sourceNote ? '<p class="hint" style="margin-top:10px;">' + escapeHtml(plan.sourceNote) + '</p>' : '') +
+    '</div>';
+  }
+
+  function escapeAttr(s){
+    return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  }
+
+  function renderPlans(){
+    var container = document.getElementById('plansContainer');
+    if(state.plans.length === 0){
+      container.innerHTML = '<div class="empty-state">No plans yet — add one to start comparing.</div>';
+      return;
+    }
+    container.innerHTML = state.plans.map(planCardHTML).join('');
+    // wire up events
+    state.plans.forEach(function(plan){
+      var card = container.querySelector('[data-id="'+plan.id+'"]');
+      card.querySelector('.plan-name-input').addEventListener('input', function(e){ plan.name = e.target.value; });
+      card.querySelector('.type-select').addEventListener('change', function(e){
+        plan.type = e.target.value;
+        card.querySelector('.type-fields').innerHTML = typeFieldsHTML(plan);
+        wireTypeFields(card, plan);
+      });
+      card.querySelector('.remove-btn').addEventListener('click', function(){
+        state.plans = state.plans.filter(function(p){ return p.id !== plan.id; });
+        renderPlans();
+      });
+      card.querySelector('.f-fee').addEventListener('input', function(e){ plan.monthlyFee = Number(e.target.value)||0; });
+      card.querySelector('.f-contract').addEventListener('input', function(e){ plan.contractMonths = Number(e.target.value)||0; });
+      card.querySelector('.f-etf').addEventListener('input', function(e){ plan.etf = Number(e.target.value)||0; });
+      card.querySelector('.f-renew').addEventListener('input', function(e){ plan.renewablePercent = Number(e.target.value)||0; });
+      card.querySelector('.f-credit-threshold').addEventListener('input', function(e){ plan.creditThreshold = Number(e.target.value)||0; });
+      card.querySelector('.f-credit-amount').addEventListener('input', function(e){ plan.creditAmount = Number(e.target.value)||0; });
+      wireTypeFields(card, plan);
+    });
+  }
+
+  function wireTypeFields(card, plan){
+    var rate = card.querySelector('.f-rate');
+    if(rate) rate.addEventListener('input', function(e){ plan.fixedRate = Number(e.target.value)||0; });
+    var peak = card.querySelector('.f-peak');
+    if(peak) peak.addEventListener('input', function(e){ plan.peakRate = Number(e.target.value)||0; });
+    var offpeak = card.querySelector('.f-offpeak');
+    if(offpeak) offpeak.addEventListener('input', function(e){ plan.offPeakRate = Number(e.target.value)||0; });
+    var tierLimits = card.querySelectorAll('.tier-limit');
+    tierLimits.forEach(function(inp){
+      inp.addEventListener('input', function(e){
+        var i = Number(e.target.dataset.tier);
+        plan.tiers[i].limit = e.target.value === '' ? null : Number(e.target.value);
+      });
+    });
+    var tierRates = card.querySelectorAll('.tier-rate');
+    tierRates.forEach(function(inp){
+      inp.addEventListener('input', function(e){
+        var i = Number(e.target.dataset.tier);
+        plan.tiers[i].rate = Number(e.target.value)||0;
+      });
+    });
+  }
+
+  // ---------- Results rendering ----------
+  function fmtMoney(n){
+    return '$' + n.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0});
+  }
+  function fmtMoney2(n){
+    return '$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+
+  function renderResults(){
+    var section = document.getElementById('resultsSection');
+    if(state.plans.length === 0){
+      section.innerHTML = '';
+      return;
+    }
+    var computed = state.plans.map(function(p){
+      var annual = planAnnualCost(p);
+      return { plan: p, annual: annual };
+    }).sort(function(a,b){ return a.annual - b.annual; });
+
+    var winner = computed[0];
+    var maxCost = computed[computed.length-1].annual || 1;
+    var runnerUp = computed[1];
+    var savingsVsRunnerUp = runnerUp ? (runnerUp.annual - winner.annual) : 0;
+
+    var html = '';
+    html += '<p class="panel-title" style="border:none; padding:0;"><span class="num">4</span> Estimated results</p>';
+    html += '<div class="results-top">';
+    html += '  <div>' + gaugeSVG(winner.annual, maxCost) + '<div class="gauge-caption">Best estimated annual cost</div></div>';
+    html += '  <div>';
+    html += '    <p class="winner-name">' + escapeHtml(winner.plan.name) + '</p>';
+    html += '    <p class="winner-sub">Lowest estimated cost for the usage you entered' + (runnerUp ? (' — ' + fmtMoney(savingsVsRunnerUp) + '/yr less than the next closest plan') : '') + '.</p>';
+    html += '    <div class="odometer">' + fmtMoney(winner.annual) + '<span class="unit">/ year</span></div>';
+    html += '    <div class="winner-meta">';
+    html += '      <div>Monthly avg<b>' + fmtMoney(winner.annual/12) + '</b></div>';
+    html += '      <div>Contract<b>' + (winner.plan.contractMonths ? winner.plan.contractMonths + ' mo' : 'None') + '</b></div>';
+    html += '      <div>Early term. fee<b>' + (winner.plan.etf ? fmtMoney(winner.plan.etf) : '—') + '</b></div>';
+    html += '      <div>Renewable<b>' + winner.plan.renewablePercent + '%</b></div>';
+    html += '    </div>';
+    html += '  </div>';
+    html += '</div>';
+
+    html += '<div class="rank-list">';
+    computed.forEach(function(c, idx){
+      var isWinner = idx === 0;
+      var widthPct = Math.max(4, (c.annual / maxCost) * 100);
+      html += '<div class="rank-row' + (isWinner?' is-winner':'') + '">';
+      html += '  <div class="rank-num">' + (idx+1) + '</div>';
+      html += '  <div><div class="rank-name">' + escapeHtml(c.plan.name) + '</div><div class="rank-tags">' + planTagLine(c.plan) + '</div></div>';
+      html += '  <div class="bar-track"><div class="bar-fill" style="width:' + widthPct + '%;"></div></div>';
+      html += '  <div class="rank-cost">' + fmtMoney(c.annual) + '<span class="permo">' + fmtMoney2(c.annual/12) + '/mo avg</span></div>';
+      html += '</div>';
+    });
+    html += '</div>';
+
+    section.innerHTML = html;
+  }
+
+  function planTagLine(plan){
+    var typeLabel = {fixed:'Fixed', tiered:'Tiered', tou:'Time-of-use', indexed:'Variable'}[plan.type] || plan.type;
+    var bits = [typeLabel];
+    bits.push(plan.contractMonths ? plan.contractMonths+'mo contract' : 'no contract');
+    if(plan.renewablePercent) bits.push(plan.renewablePercent+'% renewable');
+    if(plan.etf) bits.push('ETF ' + fmtMoney(plan.etf));
+    return bits.join(' · ');
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function gaugeSVG(value, maxValue){
+    // Analog meter dial: 220 degree sweep, needle points toward the winner's relative cost (lower=further left/green zone)
+    var frac = maxValue > 0 ? Math.min(1, value / maxValue) : 0;
+    var startAngle = -110, endAngle = 110; // degrees, 0 = up... we'll rotate needle group
+    var angle = startAngle + frac * (endAngle - startAngle);
+    var needleRotation = angle;
+    return '' +
+    '<svg viewBox="0 0 220 150" width="100%" height="150" xmlns="http://www.w3.org/2000/svg">' +
+      '<defs>' +
+        '<linearGradient id="arcGrad" x1="0" y1="0" x2="1" y2="0">' +
+          '<stop offset="0%" stop-color="#3E7C6B"/>' +
+          '<stop offset="55%" stop-color="#E8A33D"/>' +
+          '<stop offset="100%" stop-color="#C1503D"/>' +
+        '</linearGradient>' +
+      '</defs>' +
+      '<path d="M 20 130 A 90 90 0 1 1 200 130" fill="none" stroke="url(#arcGrad)" stroke-width="14" stroke-linecap="round"/>' +
+      '<circle cx="110" cy="130" r="7" fill="#F7F5F0"/>' +
+      '<g transform="translate(110,130) rotate('+needleRotation+')">' +
+        '<line x1="0" y1="0" x2="0" y2="-78" stroke="#F7F5F0" stroke-width="3" stroke-linecap="round"/>' +
+      '</g>' +
+      '<circle cx="110" cy="130" r="4" fill="#E8A33D"/>' +
+    '</svg>';
+  }
+
+  // ---------- ZIP code provider search ----------
+  // Prompt-building and JSON extraction now happen server-side in server.js,
+  // so the browser never needs an API key. This just calls our own /api/zip-search.
+
+  function renderMarketBanner(data, zip){
+    var banner = document.getElementById('marketBanner');
+    var cls = (data.market === 'deregulated' || data.market === 'regulated') ? data.market : 'unknown';
+    var label = cls === 'deregulated' ? 'Deregulated market — ' + zip
+              : cls === 'regulated' ? 'Regulated market — ' + zip
+              : 'Market status unclear — ' + zip;
+    banner.className = 'market-banner show ' + cls;
+    banner.innerHTML = '<b>' + label + '</b>' +
+      escapeHtml(data.summary || '') +
+      (data.utility ? ' Default utility: <strong>' + escapeHtml(data.utility) + '</strong>.' : '');
+  }
+
+  function planFromZipResult(raw){
+    var p = defaultPlan(raw.type || 'fixed');
+    p.fromZipSearch = true;
+    p.name = raw.name || raw.company || 'Unnamed plan';
+    p.monthlyFee = Number(raw.monthlyFee)||0;
+    p.contractMonths = Number(raw.contractMonths)||0;
+    p.etf = Number(raw.etf)||0;
+    p.renewablePercent = Number(raw.renewablePercent)||0;
+    if(raw.sourceNote) p.sourceNote = raw.sourceNote;
+    if(p.type === 'fixed' || p.type === 'indexed'){
+      p.fixedRate = Number(raw.estimatedRate)||0;
+    } else if(p.type === 'tou'){
+      p.peakRate = Number(raw.peakRate)||0;
+      p.offPeakRate = Number(raw.offPeakRate)||0;
+    } else if(p.type === 'tiered' && Array.isArray(raw.tiers) && raw.tiers.length){
+      p.tiers = raw.tiers.map(function(t){ return { limit: (t.limit===null||t.limit===undefined) ? null : Number(t.limit), rate: Number(t.rate)||0 }; });
+    }
+    return p;
+  }
+
+  function searchByZip(){
+    var zip = document.getElementById('zipInput').value.trim();
+    var status = document.getElementById('zipStatus');
+    var btn = document.getElementById('zipSearchBtn');
+    if(!zip){ status.textContent = 'Enter a ZIP code first.'; return; }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Searching…';
+    status.textContent = 'Looking up providers for ' + zip + ' — this can take up to a minute.';
+    document.getElementById('marketBanner').className = 'market-banner';
+
+    var usageArr = getUsageArray();
+    var avgMonthly = Math.round(usageArr.reduce(function(a,b){return a+b;},0) / 12);
+
+    fetch('/api/zip-search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ zip: zip, avgMonthly: avgMonthly, peakSharePct: state.peakSharePct })
+    }).then(function(res){
+        return res.json().then(function(body){ return { ok: res.ok, body: body }; });
+      })
+      .then(function(result){
+        if(!result.ok){
+          status.textContent = (result.body && result.body.error) ? result.body.error : 'Search failed — try again.';
+          btn.disabled = false; btn.textContent = 'Search providers';
+          return;
+        }
+        var parsed = result.body;
+        renderMarketBanner(parsed, zip);
+        var newPlans = (parsed.plans||[]).map(planFromZipResult);
+        if(newPlans.length){
+          state.plans = state.plans.concat(newPlans);
+          renderPlans();
+          renderResults();
+          status.textContent = 'Added ' + newPlans.length + ' plan(s) found for ' + zip + ' below — double-check details, then calculate costs.';
+        } else {
+          status.textContent = 'No specific plans found for ' + zip + ' — see the note above. You can still add plans manually below.';
+        }
+        btn.disabled = false; btn.textContent = 'Search providers';
+      })
+      .catch(function(){
+        status.textContent = 'Search failed — check your connection and that the server is running, then try again.';
+        btn.disabled = false; btn.textContent = 'Search providers';
+      });
+  }
+
+  // ---------- Storage ----------
+  function storageAvailable(){ return typeof window.storage !== 'undefined' && window.storage; }
+
+  function saveSetup(){
+    var status = document.getElementById('saveStatus');
+    if(!storageAvailable()){ status.textContent = 'Storage not available in this view.'; return; }
+    window.storage.set('setup', JSON.stringify(state), false).then(function(res){
+      status.textContent = res ? 'Saved just now.' : 'Save failed — try again.';
+    }).catch(function(){ status.textContent = 'Save failed — try again.'; });
+  }
+
+  function loadSetup(silent){
+    var status = document.getElementById('saveStatus');
+    if(!storageAvailable()){ if(!silent) status.textContent = 'Storage not available in this view.'; return; }
+    window.storage.get('setup', false).then(function(res){
+      if(res && res.value){
+        try{
+          var loaded = JSON.parse(res.value);
+          state = Object.assign({}, state, loaded);
+          setUsageMode(state.usageMode);
+          renderMonthsGrid();
+          syncPeakSlider();
+          renderPlans();
+          renderResults();
+          if(!silent) status.textContent = 'Loaded your saved setup.';
+        }catch(e){ if(!silent) status.textContent = 'Could not read saved data.'; }
+      } else if(!silent){ status.textContent = 'Nothing saved yet.'; }
+    }).catch(function(){ if(!silent) status.textContent = 'Nothing saved yet.'; });
+  }
+
+  function syncPeakSlider(){
+    var el = document.getElementById('peakShare');
+    el.value = state.peakSharePct;
+    document.getElementById('peakShareVal').textContent = state.peakSharePct;
+    document.getElementById('offPeakShareVal').textContent = 100 - state.peakSharePct;
+  }
+
+  // ---------- Init / wiring ----------
+  function init(){
+    seedPlans();
+    setUsageMode('flat');
+    renderMonthsGrid();
+    syncPeakSlider();
+    renderPlans();
+    renderResults();
+
+    document.getElementById('flatUsage').addEventListener('input', function(e){
+      state.flatUsage = Number(e.target.value)||0;
+    });
+
+    document.querySelectorAll('#usageModePills .pill').forEach(function(p){
+      p.addEventListener('click', function(){ setUsageMode(p.dataset.mode); });
+    });
+
+    document.querySelectorAll('#seasonalUsageBlock .pillrow .pill').forEach(function(p){
+      p.addEventListener('click', function(){
+        var presetKey = p.dataset.preset;
+        if(presets[presetKey]){
+          state.monthsUsage = presets[presetKey].slice();
+          renderMonthsGrid();
+        }
+      });
+    });
+
+    document.getElementById('peakShare').addEventListener('input', function(e){
+      state.peakSharePct = Number(e.target.value);
+      syncPeakSlider();
+    });
+
+    document.getElementById('addPlanBtn').addEventListener('click', function(){
+      state.plans.push(defaultPlan('fixed'));
+      renderPlans();
+    });
+
+    document.getElementById('zipSearchBtn').addEventListener('click', searchByZip);
+    document.getElementById('zipInput').addEventListener('keydown', function(e){
+      if(e.key === 'Enter') searchByZip();
+    });
+
+    document.getElementById('calcBtn').addEventListener('click', renderResults);
+    document.getElementById('saveBtn').addEventListener('click', saveSetup);
+    document.getElementById('loadBtn').addEventListener('click', function(){ loadSetup(false); });
+    document.getElementById('resetBtn').addEventListener('click', function(){
+      state = { usageMode:'flat', flatUsage:1000, monthsUsage: presets.mild.slice(), peakSharePct:30, plans: [] };
+      seedPlans();
+      setUsageMode('flat');
+      renderMonthsGrid();
+      syncPeakSlider();
+      renderPlans();
+      renderResults();
+      document.getElementById('saveStatus').textContent = 'Reset to defaults.';
+    });
+
+    // try a silent auto-load so a returning visitor sees their own numbers
+    loadSetup(true);
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+
+</script>
+</body>
+</html>
