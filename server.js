@@ -17,7 +17,7 @@ function buildPrompt(zip, avgMonthly, peakSharePct) {
   return 'A homeowner in ZIP code ' + zip + ' (USA) wants to compare residential electricity plans. ' +
     'Their average usage is about ' + avgMonthly + ' kWh/month, with roughly ' + peakSharePct + '% of that used during afternoon/evening peak hours. ' +
     'Use web search to determine: (1) whether this ZIP is in a deregulated retail-choice electricity market or a regulated utility-monopoly market, ' +
-    '(2) the name of the default/incumbent utility that delivers power there, and (3) if it is deregulated, 3-6 real current residential retail electricity plans available there from different companies (or if regulated, the closest available options such as the utility\'s standard rate and any community choice aggregation or green power program). ' +
+    '(2) the name of the default/incumbent utility that delivers power there, and (3) if it is deregulated, exactly 3 real current residential retail electricity plans available there from different companies (or if regulated, the closest available options such as the utility\'s standard rate and any community choice aggregation or green power program). ' +
     'Respond with ONLY a single JSON object and nothing else — no markdown fences, no commentary before or after. Use this exact schema: ' +
     '{"market":"deregulated|regulated|unknown","utility":"string","summary":"1-2 sentence plain-English explanation of what this means for the homeowner","plans":[{"name":"string","company":"string","type":"fixed|tiered|tou|indexed","estimatedRate":0.00,"monthlyFee":0.00,"contractMonths":0,"etf":0,"renewablePercent":0,"peakRate":0.00,"offPeakRate":0.00,"tiers":[{"limit":0,"rate":0.00}],"sourceNote":"short note on where this came from or how confident you are"}]}. ' +
     'For "type":"fixed" or "indexed" use estimatedRate. For "type":"tou" use peakRate/offPeakRate. For "type":"tiered" use tiers (limit null on the last tier). Omit fields that don\'t apply to a plan\'s type rather than guessing. If you cannot find real plans, return an empty plans array and explain why in summary.';
@@ -110,20 +110,37 @@ app.post('/api/zip-search', async (req, res) => {
       Number(peakSharePct) >= 0 ? Number(peakSharePct) : 30
     );
 
-    const upstream = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1200,
-        messages: [{ role: 'user', content: prompt }],
-        tools: [{ type: 'web_search_20250305', name: 'web_search' }]
-      })
-    });
+    const controller = new AbortController();
+    // Stay comfortably under typical proxy/host timeouts (Render's free tier can
+    // close slow connections) while still giving the web-search-backed call room to finish.
+    const timeoutId = setTimeout(() => controller.abort(), 45000);
+
+    let upstream;
+    try {
+      upstream = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 1500,
+          messages: [{ role: 'user', content: prompt }],
+          tools: [{ type: 'web_search_20250305', name: 'web_search' }]
+        }),
+        signal: controller.signal
+      });
+    } catch (fetchErr) {
+      clearTimeout(timeoutId);
+      if (fetchErr.name === 'AbortError') {
+        return res.status(504).json({ error: 'The search took too long and timed out. This can happen on slower connections — try again in a moment.' });
+      }
+      // Covers Node's "terminated" error and other dropped-connection cases
+      return res.status(502).json({ error: 'The connection to the search service was interrupted. Please try again.' });
+    }
+    clearTimeout(timeoutId);
 
     const data = await upstream.json();
 
