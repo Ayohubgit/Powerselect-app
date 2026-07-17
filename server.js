@@ -5,7 +5,7 @@ const cors = require('cors');
 const app = express();
 app.set('trust proxy', true); // needed so req.ip reflects the real visitor, not Render's proxy
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // bill photos are base64-encoded, so allow a larger body
 app.use(express.static('public'));
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
@@ -23,6 +23,15 @@ function buildPrompt(zip, avgMonthly, peakSharePct) {
     'For "type":"fixed" or "indexed" use estimatedRate. For "type":"tou" use peakRate/offPeakRate. For "type":"tiered" use tiers (limit null on the last tier). Omit fields that don\'t apply to a plan\'s type rather than guessing. If you cannot find real plans, return an empty plans array and explain why in summary.';
 }
 
+function buildBillScanPrompt() {
+  return 'This image or PDF is a residential electricity utility bill. Read it carefully and extract the usage information. ' +
+    'Look for: the current billing period\'s total kWh usage, and — if the bill includes a usage history graph or table (common on many utility bills) — as many individual months of kWh usage as you can read. ' +
+    'Respond with ONLY a single JSON object and nothing else — no markdown fences, no commentary before or after. Use this exact schema: ' +
+    '{"avgMonthlyKwh":0,"billingPeriodKwh":0,"months":[{"label":"string","kwh":0}],"confidence":"high|medium|low","notes":"one short sentence about what you found or any uncertainty"}. ' +
+    'If you can only find one billing period\'s usage and no history, set months to an empty array and use billingPeriodKwh and avgMonthlyKwh for that one value. ' +
+    'If the image is unclear, isn\'t a utility bill, or you can\'t confidently read numbers, set confidence to "low" and explain briefly in notes rather than guessing at numbers.';
+}
+
 function extractJson(text) {
   const start = text.indexOf('{');
   const end = text.lastIndexOf('}');
@@ -38,9 +47,9 @@ function extractJson(text) {
 // plenty good enough to stop a spike from burning through the API budget, but
 // swap in something like Redis if this ever needs to scale beyond one instance.
 
-const PER_IP_LIMIT = 5;              // max ZIP searches per visitor per hour
+const PER_IP_LIMIT = 6;              // max AI-backed requests per visitor per hour (zip search + bill scan combined)
 const PER_IP_WINDOW_MS = 60 * 60 * 1000;
-const GLOBAL_DAILY_LIMIT = 60;       // max total ZIP searches per day, across all visitors
+const GLOBAL_DAILY_LIMIT = 80;       // max total AI-backed requests per day, across all visitors
 
 const ipHits = new Map(); // ip -> array of request timestamps (ms)
 let globalCounter = { day: todayKey(), count: 0 };
@@ -159,6 +168,92 @@ app.post('/api/zip-search', async (req, res) => {
     } catch (parseErr) {
       console.error('Could not parse model output as JSON:', text);
       return res.status(502).json({ error: 'Could not parse a clean result from the model.', raw: text });
+    }
+
+    res.json(parsed);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message || 'Unexpected server error' });
+  }
+});
+
+app.post('/api/bill-scan', async (req, res) => {
+  try {
+    if (!ANTHROPIC_API_KEY) {
+      return res.status(500).json({ error: 'Server is missing ANTHROPIC_API_KEY. Set it in your environment and redeploy.' });
+    }
+
+    const clientIp = req.ip || 'unknown';
+    const limitCheck = checkRateLimit(clientIp);
+    if (!limitCheck.allowed) {
+      const message = limitCheck.reason === 'global'
+        ? 'This tool has hit its search limit for today — please check back tomorrow.'
+        : 'You\'ve hit the search limit for now — try again in a bit.';
+      return res.status(429).json({ error: message });
+    }
+
+    const { imageBase64, mediaType } = req.body || {};
+    if (!imageBase64 || !mediaType) {
+      return res.status(400).json({ error: 'An image (imageBase64) and mediaType are required.' });
+    }
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'application/pdf'];
+    if (allowedTypes.indexOf(mediaType) === -1) {
+      return res.status(400).json({ error: 'Unsupported file type. Please upload a PNG, JPEG, WEBP, or PDF.' });
+    }
+
+    const isPdf = mediaType === 'application/pdf';
+    const contentBlock = isPdf
+      ? { type: 'document', source: { type: 'base64', media_type: mediaType, data: imageBase64 } }
+      : { type: 'image', source: { type: 'base64', media_type: mediaType, data: imageBase64 } };
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 45000);
+
+    let upstream;
+    try {
+      upstream = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 1000,
+          messages: [{
+            role: 'user',
+            content: [ contentBlock, { type: 'text', text: buildBillScanPrompt() } ]
+          }]
+        }),
+        signal: controller.signal
+      });
+    } catch (fetchErr) {
+      clearTimeout(timeoutId);
+      if (fetchErr.name === 'AbortError') {
+        return res.status(504).json({ error: 'Reading the bill took too long and timed out. Try again in a moment.' });
+      }
+      return res.status(502).json({ error: 'The connection was interrupted while reading the bill. Please try again.' });
+    }
+    clearTimeout(timeoutId);
+
+    const data = await upstream.json();
+
+    if (!upstream.ok) {
+      console.error('Anthropic API error (bill scan):', data);
+      return res.status(502).json({ error: 'Upstream API error', detail: data });
+    }
+
+    const text = (data.content || [])
+      .map((block) => (block.type === 'text' ? block.text : ''))
+      .join('\n');
+
+    let parsed;
+    try {
+      parsed = extractJson(text);
+    } catch (parseErr) {
+      console.error('Could not parse bill-scan output as JSON:', text);
+      return res.status(502).json({ error: 'Could not read that bill clearly. Try a sharper photo or a different page of the bill.', raw: text });
     }
 
     res.json(parsed);
