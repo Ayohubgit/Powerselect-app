@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>MyRateDial — find your best electricity plan</title>
+<title>RateDial — find your best electricity plan</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
@@ -352,7 +352,7 @@ footer.foot{
   <header class="top">
     <div>
       <p class="brand-eyebrow">Household energy planner</p>
-      <h1 class="brand">MYRATE<span>DIAL</span></h1>
+      <h1 class="brand">RATE<span>DIAL</span></h1>
     </div>
     <p class="tagline">Enter how you use power and the plans you're considering — RateDial estimates your real annual cost on each one, tiers, time-of-use, and fine print included.</p>
   </header>
@@ -975,13 +975,14 @@ footer.foot{
         var parsed = result.body;
         renderMarketBanner(parsed, zip);
         var newPlans = (parsed.plans||[]).map(planFromZipResult);
+        var cacheNote = parsed.fromCache ? ' (from a recent search — no new lookup needed)' : '';
         if(newPlans.length){
           state.plans = state.plans.concat(newPlans);
           renderPlans();
           renderResults();
-          status.textContent = 'Added ' + newPlans.length + ' plan(s) found for ' + zip + ' below — double-check details, then calculate costs.';
+          status.textContent = 'Added ' + newPlans.length + ' plan(s) found for ' + zip + cacheNote + ' below — double-check details, then calculate costs.';
         } else {
-          status.textContent = 'No specific plans found for ' + zip + ' — see the note above. You can still add plans manually below.';
+          status.textContent = 'No specific plans found for ' + zip + cacheNote + ' — see the note above. You can still add plans manually below.';
         }
         btn.disabled = false; btn.textContent = 'Search providers';
       })
