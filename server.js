@@ -93,10 +93,57 @@ setInterval(() => {
   }
 }, 15 * 60 * 1000).unref();
 
+// ---------- ZIP search cache ----------
+// Plan availability for a given ZIP doesn't meaningfully change minute to minute,
+// so we cache results per ZIP and reuse them for anyone else searching the same
+// ZIP within the cache window. This is the single biggest cost saver here, since
+// popular ZIPs get searched by many different visitors.
+
+const ZIP_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const zipCache = new Map(); // normalized zip -> { data, timestamp }
+
+function normalizeZip(zip) {
+  return zip.trim().toUpperCase().slice(0, 10);
+}
+
+function getCachedZipResult(zip) {
+  const entry = zipCache.get(normalizeZip(zip));
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > ZIP_CACHE_TTL_MS) {
+    zipCache.delete(normalizeZip(zip));
+    return null;
+  }
+  return entry.data;
+}
+
+function setCachedZipResult(zip, data) {
+  zipCache.set(normalizeZip(zip), { data, timestamp: Date.now() });
+}
+
+// Light cleanup for the zip cache too, same idea as the ipHits cleanup above
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of zipCache.entries()) {
+    if (now - entry.timestamp > ZIP_CACHE_TTL_MS) zipCache.delete(key);
+  }
+}, 60 * 60 * 1000).unref();
+
 app.post('/api/zip-search', async (req, res) => {
   try {
     if (!ANTHROPIC_API_KEY) {
       return res.status(500).json({ error: 'Server is missing ANTHROPIC_API_KEY. Set it in your environment and redeploy.' });
+    }
+
+    const { zip, avgMonthly, peakSharePct } = req.body || {};
+    if (!zip || typeof zip !== 'string') {
+      return res.status(400).json({ error: 'A zip code (string) is required.' });
+    }
+
+    // Serve from cache if we've searched this ZIP recently — free, instant, and
+    // doesn't touch the rate limit since no API call happens.
+    const cached = getCachedZipResult(zip);
+    if (cached) {
+      return res.json(Object.assign({}, cached, { fromCache: true }));
     }
 
     const clientIp = req.ip || 'unknown';
@@ -106,11 +153,6 @@ app.post('/api/zip-search', async (req, res) => {
         ? 'This tool has hit its search limit for today — please check back tomorrow.'
         : 'You\'ve hit the search limit for now — try again in a bit.';
       return res.status(429).json({ error: message });
-    }
-
-    const { zip, avgMonthly, peakSharePct } = req.body || {};
-    if (!zip || typeof zip !== 'string') {
-      return res.status(400).json({ error: 'A zip code (string) is required.' });
     }
 
     const prompt = buildPrompt(
@@ -170,7 +212,8 @@ app.post('/api/zip-search', async (req, res) => {
       return res.status(502).json({ error: 'Could not parse a clean result from the model.', raw: text });
     }
 
-    res.json(parsed);
+    setCachedZipResult(zip, parsed);
+    res.json(Object.assign({}, parsed, { fromCache: false }));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message || 'Unexpected server error' });
@@ -271,7 +314,8 @@ app.get('/api/health', (req, res) => {
     ok: true,
     hasApiKey: !!ANTHROPIC_API_KEY,
     zipSearchesToday: countToday,
-    dailyLimit: GLOBAL_DAILY_LIMIT
+    dailyLimit: GLOBAL_DAILY_LIMIT,
+    zipCacheEntries: zipCache.size
   });
 });
 
