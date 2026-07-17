@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>MyRateDial — find your best electricity plan</title>
+<title>RateDial — find your best electricity plan</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
@@ -187,6 +187,43 @@ input[type="range"]{width:100%; accent-color:var(--brass-dark);}
 }
 @keyframes spin{ to { transform:rotate(360deg); } }
 
+.risk-badge{
+  font-family:'IBM Plex Mono',monospace; font-size:9.5px; text-transform:uppercase; letter-spacing:.04em;
+  padding:2px 7px; border-radius:999px; font-weight:600; white-space:nowrap;
+}
+.risk-fixed{background:rgba(62,124,107,0.15); color:var(--teal);}
+.risk-tiered{background:rgba(62,124,107,0.12); color:var(--teal);}
+.risk-tou{background:rgba(232,163,61,0.18); color:var(--brass-dark);}
+.risk-indexed{background:rgba(193,80,61,0.14); color:var(--rust);}
+
+.plan-card.is-current-plan{border-color:var(--brass-dark); box-shadow: inset 3px 0 0 var(--brass-dark); background:linear-gradient(180deg, #FFFDF7, #FCFBF8);}
+.current-tag{
+  font-family:'IBM Plex Mono',monospace; font-size:9.5px; text-transform:uppercase; letter-spacing:.04em;
+  background:var(--ink); color:var(--paper); padding:2px 7px; border-radius:999px; margin-left:6px; vertical-align:middle;
+}
+.breakeven-line{font-size:11.5px; margin-top:4px; font-family:'IBM Plex Mono',monospace; line-height:1.4;}
+.breakeven-good{color:var(--teal);}
+.breakeven-bad{color:var(--rust);}
+
+.scenario-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin-top:8px;}
+.scenario-card{
+  border:1px solid var(--line); border-radius:8px; padding:10px 12px; cursor:pointer; user-select:none;
+  background:var(--paper); transition:background .1s, border-color .1s;
+}
+.scenario-card.active{background:rgba(232,163,61,0.12); border-color:var(--brass-dark);}
+.scenario-card .sc-title{font-size:12.5px; font-weight:600; color:var(--ink);}
+.scenario-card .sc-detail{font-size:10.5px; color:#8A8F98; font-family:'IBM Plex Mono',monospace; margin-top:2px;}
+.usage-delta-note{font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--brass-dark); margin-top:10px;}
+
+.bill-upload-row{display:flex; gap:10px; align-items:center; margin-top:6px; flex-wrap:wrap;}
+.bill-upload-row input[type="file"]{
+  font-family:'IBM Plex Mono',monospace; font-size:11.5px; flex:1; min-width:180px;
+}
+.bill-scan-result{
+  margin-top:10px; padding:10px 12px; border-radius:8px; background:var(--paper-dim); font-size:12px; line-height:1.5; display:none;
+}
+.bill-scan-result.show{display:block;}
+
 .plan-card{
   border:1px solid var(--line);
   border-radius:8px;
@@ -315,7 +352,7 @@ footer.foot{
   <header class="top">
     <div>
       <p class="brand-eyebrow">Household energy planner</p>
-      <h1 class="brand">MYRATE<span>DIAL</span></h1>
+      <h1 class="brand">RATE<span>DIAL</span></h1>
     </div>
     <p class="tagline">Enter how you use power and the plans you're considering — RateDial estimates your real annual cost on each one, tiers, time-of-use, and fine print included.</p>
   </header>
@@ -354,6 +391,16 @@ footer.foot{
         <div class="pill" data-mode="seasonal">Varies by season</div>
       </div>
 
+      <div style="margin-top:14px; padding-top:12px; border-top:1px dashed var(--line);">
+        <label class="field-label" style="margin-top:0;">Or scan a bill photo</label>
+        <div class="bill-upload-row">
+          <input type="file" id="billFileInput" accept="image/png,image/jpeg,image/webp,application/pdf">
+          <button class="btn primary" id="billScanBtn" style="white-space:nowrap;">Scan bill</button>
+        </div>
+        <p class="hint">Upload a clear photo or PDF of a utility bill — RateDial will try to read your usage straight off it.</p>
+        <div class="bill-scan-result" id="billScanResult"></div>
+      </div>
+
       <div id="flatUsageBlock">
         <label class="field-label">Average monthly usage (kWh)</label>
         <input type="number" id="flatUsage" value="1000" min="0" step="10">
@@ -376,6 +423,12 @@ footer.foot{
         <div class="slider-val"><span id="peakShareVal">30</span>% during peak / <span id="offPeakShareVal">70</span>% off-peak</div>
       </div>
       <p class="hint">Only matters for time-of-use plans. Higher if you run AC, laundry, or EV charging during afternoon/evening peak windows.</p>
+
+      <div style="margin-top:16px; padding-top:14px; border-top:1px dashed var(--line);">
+        <label class="field-label" style="margin-top:0;">Model a future change</label>
+        <div class="scenario-grid" id="scenarioGrid"></div>
+        <div class="usage-delta-note" id="usageDeltaNote"></div>
+      </div>
     </div>
 
     <!-- PLANS PANEL -->
@@ -400,7 +453,7 @@ footer.foot{
     </div>
   </div>
 
-  <footer class="foot">MyRateDial estimates costs from the numbers you enter — always confirm exact rates, fees, and terms with the provider before signing.</footer>
+  <footer class="foot">RateDial estimates costs from the numbers you enter — always confirm exact rates, fees, and terms with the provider before signing.</footer>
 </div>
 
 <script>
@@ -413,7 +466,16 @@ footer.foot{
     flatUsage: 1000,
     monthsUsage: [900,850,750,700,750,900,1300,1350,1050,800,800,900], // rough US seasonal default
     peakSharePct: 30,
-    plans: []
+    plans: [],
+    scenarios: { ev:false, pool:false, wfh:false, solar:false },
+    currentPlanId: null
+  };
+
+  var scenarioDefs = {
+    ev:    { label: 'EV charging at home', kwhPerMonth: 300 },
+    pool:  { label: 'Pool pump (summer)',  kwhPerMonth: 200, monthsOnly: [5,6,7,8] }, // Jun-Sep, 0-indexed
+    wfh:   { label: 'Home office / WFH',   kwhPerMonth: 150 },
+    solar: { label: 'Solar panels',        multiplier: 0.6 }
   };
 
   var monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -433,6 +495,7 @@ footer.foot{
       type: type || 'fixed',
       monthlyFee: 6.95,
       contractMonths: 12,
+      monthsRemaining: 12,
       etf: 0,
       renewablePercent: 0,
       fixedRate: 0.15,
@@ -443,6 +506,10 @@ footer.foot{
       creditAmount: 0
     };
     return base;
+  }
+
+  function riskLabel(type){
+    return { fixed:'Low', tiered:'Low-Med', tou:'Medium', indexed:'High' }[type] || 'Unknown';
   }
 
   function seedPlans(){
@@ -464,7 +531,7 @@ footer.foot{
   }
 
   // ---------- Usage helpers ----------
-  function getUsageArray(){
+  function getBaseUsageArray(){
     if(state.usageMode === 'flat'){
       var v = state.flatUsage || 0;
       var arr = [];
@@ -472,6 +539,18 @@ footer.foot{
       return arr;
     }
     return state.monthsUsage.slice();
+  }
+
+  function getUsageArray(){
+    var arr = getBaseUsageArray();
+    if(state.scenarios.ev)  arr = arr.map(function(v){ return v + scenarioDefs.ev.kwhPerMonth; });
+    if(state.scenarios.wfh) arr = arr.map(function(v){ return v + scenarioDefs.wfh.kwhPerMonth; });
+    if(state.scenarios.pool){
+      var poolMonths = scenarioDefs.pool.monthsOnly;
+      arr = arr.map(function(v,i){ return poolMonths.indexOf(i) !== -1 ? v + scenarioDefs.pool.kwhPerMonth : v; });
+    }
+    if(state.scenarios.solar) arr = arr.map(function(v){ return v * scenarioDefs.solar.multiplier; });
+    return arr;
   }
 
   function totalAnnualUsage(){
@@ -533,6 +612,7 @@ footer.foot{
       input.dataset.monthIdx = idx;
       input.addEventListener('input', function(){
         state.monthsUsage[idx] = Number(input.value)||0;
+        updateUsageDeltaNote();
       });
       wrap.appendChild(label); wrap.appendChild(input);
       grid.appendChild(wrap);
@@ -546,6 +626,40 @@ footer.foot{
     });
     document.getElementById('flatUsageBlock').style.display = mode==='flat' ? '' : 'none';
     document.getElementById('seasonalUsageBlock').style.display = mode==='seasonal' ? '' : 'none';
+    updateUsageDeltaNote();
+  }
+
+  // ---------- Scenario modeling ----------
+  function renderScenarioGrid(){
+    var grid = document.getElementById('scenarioGrid');
+    grid.innerHTML = Object.keys(scenarioDefs).map(function(key){
+      var def = scenarioDefs[key];
+      var active = !!state.scenarios[key];
+      var detail = def.multiplier ? Math.round((1-def.multiplier)*100) + '% less usage' : '+' + def.kwhPerMonth + ' kWh/mo' + (def.monthsOnly ? ' (summer)' : '');
+      return '<div class="scenario-card' + (active?' active':'') + '" data-scenario="'+key+'">' +
+        '<div class="sc-title">' + escapeHtml(def.label) + '</div>' +
+        '<div class="sc-detail">' + detail + '</div>' +
+        '</div>';
+    }).join('');
+    grid.querySelectorAll('.scenario-card').forEach(function(card){
+      card.addEventListener('click', function(){
+        var key = card.dataset.scenario;
+        state.scenarios[key] = !state.scenarios[key];
+        renderScenarioGrid();
+        updateUsageDeltaNote();
+        renderResults();
+      });
+    });
+  }
+
+  function updateUsageDeltaNote(){
+    var note = document.getElementById('usageDeltaNote');
+    var baseTotal = getBaseUsageArray().reduce(function(a,b){return a+b;},0);
+    var adjTotal = getUsageArray().reduce(function(a,b){return a+b;},0);
+    var baseAvg = Math.round(baseTotal/12), adjAvg = Math.round(adjTotal/12);
+    var anyActive = Object.keys(state.scenarios).some(function(k){ return state.scenarios[k]; });
+    if(!anyActive){ note.textContent = ''; return; }
+    note.textContent = 'With these changes: ~' + adjAvg + ' kWh/mo (baseline was ~' + baseAvg + ' kWh/mo). Results below reflect the adjusted usage.';
   }
 
   // ---------- Rendering: plan cards ----------
@@ -578,15 +692,19 @@ footer.foot{
   }
 
   function planCardHTML(plan){
+    var isCurrent = state.currentPlanId === plan.id;
     return '' +
-    '<div class="plan-card" data-id="'+plan.id+'">' +
+    '<div class="plan-card'+(isCurrent?' is-current-plan':'')+'" data-id="'+plan.id+'">' +
       '<div class="plan-head">' +
-        '<div style="flex:1; display:flex; align-items:center; min-width:0;">' +
+        '<div style="flex:1; display:flex; align-items:center; min-width:0; flex-wrap:wrap; gap:4px;">' +
           '<input type="text" class="plan-name-input" value="'+escapeAttr(plan.name)+'" style="flex:1; min-width:0;">' +
           (plan.fromZipSearch ? '<span class="zip-badge">from ZIP</span>' : '') +
+          '<span class="risk-badge risk-'+plan.type+'">Risk: '+riskLabel(plan.type)+'</span>' +
         '</div>' +
         '<button class="remove-btn" data-remove="'+plan.id+'">Remove</button>' +
       '</div>' +
+      '<label class="checkfield" style="margin-top:8px;"><input type="checkbox" class="f-is-current" '+(isCurrent?'checked':'')+'> This is my current plan</label>' +
+      (isCurrent ? '<div class="row2" style="margin-top:8px;"><div><label class="field-label" style="margin:0 0 3px;">Months left on this contract</label><input type="number" min="0" class="f-months-remaining" value="'+(plan.monthsRemaining!=null?plan.monthsRemaining:plan.contractMonths)+'"></div><div></div></div>' : '') +
       '<select class="type-select">' +
         '<option value="fixed"'+(plan.type==='fixed'?' selected':'')+'>Fixed rate</option>' +
         '<option value="tiered"'+(plan.type==='tiered'?' selected':'')+'>Tiered rate</option>' +
@@ -639,6 +757,15 @@ footer.foot{
       card.querySelector('.f-renew').addEventListener('input', function(e){ plan.renewablePercent = Number(e.target.value)||0; });
       card.querySelector('.f-credit-threshold').addEventListener('input', function(e){ plan.creditThreshold = Number(e.target.value)||0; });
       card.querySelector('.f-credit-amount').addEventListener('input', function(e){ plan.creditAmount = Number(e.target.value)||0; });
+      card.querySelector('.f-is-current').addEventListener('change', function(e){
+        state.currentPlanId = e.target.checked ? plan.id : null;
+        renderPlans();
+        renderResults();
+      });
+      var monthsRemainingInput = card.querySelector('.f-months-remaining');
+      if(monthsRemainingInput){
+        monthsRemainingInput.addEventListener('input', function(e){ plan.monthsRemaining = Number(e.target.value)||0; });
+      }
       wireTypeFields(card, plan);
     });
   }
@@ -674,6 +801,21 @@ footer.foot{
     return '$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
   }
 
+  function breakEvenLine(candidatePlan, candidateAnnual, currentPlan, currentAnnual){
+    if(!currentPlan || candidatePlan.id === currentPlan.id) return '';
+    var monthlySavings = (currentAnnual - candidateAnnual) / 12;
+    if(monthlySavings <= 0){
+      return '<div class="breakeven-line breakeven-bad">Costs more than your current plan — not worth switching on price alone.</div>';
+    }
+    var monthsLeft = Number(currentPlan.monthsRemaining || 0);
+    var etf = monthsLeft > 0 ? Number(currentPlan.etf || 0) : 0;
+    if(etf <= 0){
+      return '<div class="breakeven-line breakeven-good">Saves ' + fmtMoney(monthlySavings) + '/mo with no early termination cost — switch anytime.</div>';
+    }
+    var months = etf / monthlySavings;
+    return '<div class="breakeven-line breakeven-good">Saves ' + fmtMoney(monthlySavings) + '/mo — pays off the ' + fmtMoney(etf) + ' early termination fee in about ' + Math.ceil(months) + ' month' + (Math.ceil(months)===1?'':'s') + '.</div>';
+  }
+
   function renderResults(){
     var section = document.getElementById('resultsSection');
     if(state.plans.length === 0){
@@ -689,6 +831,9 @@ footer.foot{
     var maxCost = computed[computed.length-1].annual || 1;
     var runnerUp = computed[1];
     var savingsVsRunnerUp = runnerUp ? (runnerUp.annual - winner.annual) : 0;
+
+    var currentPlan = state.currentPlanId ? state.plans.find(function(p){ return p.id === state.currentPlanId; }) : null;
+    var currentAnnual = currentPlan ? planAnnualCost(currentPlan) : null;
 
     var html = '';
     html += '<p class="panel-title" style="border:none; padding:0;"><span class="num">4</span> Estimated results</p>';
@@ -710,10 +855,13 @@ footer.foot{
     html += '<div class="rank-list">';
     computed.forEach(function(c, idx){
       var isWinner = idx === 0;
+      var isCurrent = currentPlan && c.plan.id === currentPlan.id;
       var widthPct = Math.max(4, (c.annual / maxCost) * 100);
       html += '<div class="rank-row' + (isWinner?' is-winner':'') + '">';
       html += '  <div class="rank-num">' + (idx+1) + '</div>';
-      html += '  <div><div class="rank-name">' + escapeHtml(c.plan.name) + '</div><div class="rank-tags">' + planTagLine(c.plan) + '</div></div>';
+      html += '  <div><div class="rank-name">' + escapeHtml(c.plan.name) + (isCurrent ? ' <span class="current-tag">Your current plan</span>' : '') + '</div><div class="rank-tags">' + planTagLine(c.plan) + '</div>' +
+        (currentPlan ? breakEvenLine(c.plan, c.annual, currentPlan, currentAnnual) : '') +
+        '</div>';
       html += '  <div class="bar-track"><div class="bar-fill" style="width:' + widthPct + '%;"></div></div>';
       html += '  <div class="rank-cost">' + fmtMoney(c.annual) + '<span class="permo">' + fmtMoney2(c.annual/12) + '/mo avg</span></div>';
       html += '</div>';
@@ -729,6 +877,7 @@ footer.foot{
     bits.push(plan.contractMonths ? plan.contractMonths+'mo contract' : 'no contract');
     if(plan.renewablePercent) bits.push(plan.renewablePercent+'% renewable');
     if(plan.etf) bits.push('ETF ' + fmtMoney(plan.etf));
+    bits.push('Risk: ' + riskLabel(plan.type));
     return bits.join(' · ');
   }
 
@@ -842,6 +991,80 @@ footer.foot{
       });
   }
 
+  // ---------- Bill photo scan ----------
+  function fileToBase64(file){
+    return new Promise(function(resolve, reject){
+      var reader = new FileReader();
+      reader.onload = function(){ resolve(reader.result.split(',')[1]); };
+      reader.onerror = function(){ reject(new Error('Could not read file')); };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function scanBillPhoto(){
+    var input = document.getElementById('billFileInput');
+    var btn = document.getElementById('billScanBtn');
+    var resultBox = document.getElementById('billScanResult');
+    var file = input.files && input.files[0];
+
+    resultBox.className = 'bill-scan-result show';
+    if(!file){ resultBox.textContent = 'Choose a photo or PDF of a bill first.'; return; }
+    if(file.size > 8 * 1024 * 1024){ resultBox.textContent = 'That file is a bit large — try a smaller photo (under 8MB) or a tighter crop.'; return; }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Reading…';
+    resultBox.textContent = 'Reading your bill — this can take up to a minute.';
+
+    fileToBase64(file).then(function(base64){
+      return fetch('/api/bill-scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64, mediaType: file.type })
+      });
+    }).then(function(res){
+      return res.json().then(function(body){ return { ok: res.ok, body: body }; });
+    }).then(function(result){
+      btn.disabled = false; btn.textContent = 'Scan bill';
+      if(!result.ok){
+        resultBox.textContent = (result.body && result.body.error) ? result.body.error : 'Could not read that bill — try a clearer photo.';
+        return;
+      }
+      var data = result.body;
+      var applied = false;
+      if(Array.isArray(data.months) && data.months.length >= 3){
+        // We can't reliably know which calendar months these map to, so we
+        // switch to seasonal mode and lay them into the grid in the order found,
+        // starting from January — the person can nudge them afterward if needed.
+        var vals = data.months.map(function(m){ return Number(m.kwh)||0; }).filter(function(v){ return v>0; });
+        if(vals.length >= 3){
+          var filled = state.monthsUsage.slice();
+          for(var i=0;i<filled.length;i++){ filled[i] = vals[i % vals.length]; }
+          state.monthsUsage = filled;
+          setUsageMode('seasonal');
+          renderMonthsGrid();
+          applied = true;
+        }
+      }
+      if(!applied && data.avgMonthlyKwh){
+        state.flatUsage = Math.round(Number(data.avgMonthlyKwh));
+        document.getElementById('flatUsage').value = state.flatUsage;
+        setUsageMode('flat');
+        applied = true;
+      }
+      updateUsageDeltaNote();
+      renderResults();
+
+      var monthList = (data.months||[]).map(function(m){ return escapeHtml(m.label||'') + ': ' + (m.kwh||'?') + ' kWh'; }).join(', ');
+      resultBox.innerHTML = (applied ? '<strong>Applied to your usage profile.</strong> ' : '<strong>Read the bill, but could not confidently apply it — check the numbers below.</strong> ') +
+        escapeHtml(data.notes || '') +
+        (monthList ? '<br><span style="color:#8A8F98;">Found: ' + monthList + '</span>' : '') +
+        (data.confidence ? '<br><span style="color:#8A8F98;">Confidence: ' + escapeHtml(data.confidence) + '</span>' : '');
+    }).catch(function(){
+      btn.disabled = false; btn.textContent = 'Scan bill';
+      resultBox.textContent = 'Something went wrong reading that file — try again.';
+    });
+  }
+
   // ---------- Storage ----------
   function storageAvailable(){ return typeof window.storage !== 'undefined' && window.storage; }
 
@@ -861,11 +1084,14 @@ footer.foot{
         try{
           var loaded = JSON.parse(res.value);
           state = Object.assign({}, state, loaded);
+          if(!state.scenarios) state.scenarios = { ev:false, pool:false, wfh:false, solar:false };
           setUsageMode(state.usageMode);
           renderMonthsGrid();
           syncPeakSlider();
           renderPlans();
           renderResults();
+          renderScenarioGrid();
+          updateUsageDeltaNote();
           if(!silent) status.textContent = 'Loaded your saved setup.';
         }catch(e){ if(!silent) status.textContent = 'Could not read saved data.'; }
       } else if(!silent){ status.textContent = 'Nothing saved yet.'; }
@@ -887,10 +1113,15 @@ footer.foot{
     syncPeakSlider();
     renderPlans();
     renderResults();
+    renderScenarioGrid();
+    updateUsageDeltaNote();
 
     document.getElementById('flatUsage').addEventListener('input', function(e){
       state.flatUsage = Number(e.target.value)||0;
+      updateUsageDeltaNote();
     });
+
+    document.getElementById('billScanBtn').addEventListener('click', scanBillPhoto);
 
     document.querySelectorAll('#usageModePills .pill').forEach(function(p){
       p.addEventListener('click', function(){ setUsageMode(p.dataset.mode); });
@@ -902,6 +1133,8 @@ footer.foot{
         if(presets[presetKey]){
           state.monthsUsage = presets[presetKey].slice();
           renderMonthsGrid();
+          updateUsageDeltaNote();
+          renderResults();
         }
       });
     });
@@ -925,13 +1158,15 @@ footer.foot{
     document.getElementById('saveBtn').addEventListener('click', saveSetup);
     document.getElementById('loadBtn').addEventListener('click', function(){ loadSetup(false); });
     document.getElementById('resetBtn').addEventListener('click', function(){
-      state = { usageMode:'flat', flatUsage:1000, monthsUsage: presets.mild.slice(), peakSharePct:30, plans: [] };
+      state = { usageMode:'flat', flatUsage:1000, monthsUsage: presets.mild.slice(), peakSharePct:30, plans: [], scenarios: { ev:false, pool:false, wfh:false, solar:false }, currentPlanId: null };
       seedPlans();
       setUsageMode('flat');
       renderMonthsGrid();
       syncPeakSlider();
       renderPlans();
       renderResults();
+      renderScenarioGrid();
+      updateUsageDeltaNote();
       document.getElementById('saveStatus').textContent = 'Reset to defaults.';
     });
 
