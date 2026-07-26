@@ -44,8 +44,11 @@ ul{ padding-left:20px; }
   <ul>
     <li>No accounts, no sign-up, no email or name collection anywhere in the app.</li>
     <li>No cookies, no analytics or tracking scripts, no advertising identifiers.</li>
-    <li>No persistent database of anything you enter — usage numbers, plans, and bill uploads exist only for the length of your session in your browser.</li>
+    <li>No server-side database of anything you enter — usage numbers, plans, and bill uploads are processed only for the length of a single request and are not stored on our servers.</li>
   </ul>
+
+  <h2>The "Save my setup" feature</h2>
+  <p>If you use the Save/Load buttons, your usage numbers and plan list are saved using your <strong>browser's own local storage</strong> — not sent to our server or anywhere else. This means: it only works on that one browser, on that one device; clearing your browser data removes it; and we have no access to it or copy of it ourselves. It's purely a convenience so you don't have to retype everything if you come back later on the same device.</p>
 
   <h2>Third parties involved</h2>
   <p>ZIP searches and bill scans are processed using <strong>Anthropic's Claude API</strong>. Anthropic does not use API inputs or outputs to train its models, and API request logs are automatically deleted on Anthropic's side after a short retention window (7 days, per Anthropic's standard terms at the time of writing). We don't control Anthropic's systems directly — this description reflects Anthropic's published terms as of this policy's last update, and you can review Anthropic's own privacy documentation at
