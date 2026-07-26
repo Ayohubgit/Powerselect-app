@@ -397,7 +397,7 @@ footer.foot{
           <input type="file" id="billFileInput" accept="image/png,image/jpeg,image/webp,application/pdf">
           <button class="btn primary" id="billScanBtn" style="white-space:nowrap;">Scan bill</button>
         </div>
-        <p class="hint">Upload a clear photo or PDF of a utility bill — RateDial will try to read your usage straight off it.</p>
+        <p class="hint">Upload a clear photo or PDF of a utility bill — MyRateDial will try to read your usage straight off it.</p>
         <div class="bill-scan-result" id="billScanResult"></div>
       </div>
 
@@ -1067,36 +1067,54 @@ footer.foot{
   }
 
   // ---------- Storage ----------
-  function storageAvailable(){ return typeof window.storage !== 'undefined' && window.storage; }
+  var STORAGE_KEY = 'myratedial:setup';
+
+  function storageAvailable(){
+    try{
+      var testKey = '__myratedial_test__';
+      window.localStorage.setItem(testKey, '1');
+      window.localStorage.removeItem(testKey);
+      return true;
+    }catch(e){
+      return false; // e.g. private browsing modes that block storage, or it's disabled
+    }
+  }
 
   function saveSetup(){
     var status = document.getElementById('saveStatus');
-    if(!storageAvailable()){ status.textContent = 'Storage not available in this view.'; return; }
-    window.storage.set('setup', JSON.stringify(state), false).then(function(res){
-      status.textContent = res ? 'Saved just now.' : 'Save failed — try again.';
-    }).catch(function(){ status.textContent = 'Save failed — try again.'; });
+    if(!storageAvailable()){ status.textContent = 'Your browser is blocking local storage (common in private/incognito mode) — saving isn\'t available right now.'; return; }
+    try{
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      status.textContent = 'Saved to this browser just now.';
+    }catch(e){
+      status.textContent = 'Save failed — your browser may be low on storage space.';
+    }
   }
 
   function loadSetup(silent){
     var status = document.getElementById('saveStatus');
-    if(!storageAvailable()){ if(!silent) status.textContent = 'Storage not available in this view.'; return; }
-    window.storage.get('setup', false).then(function(res){
-      if(res && res.value){
-        try{
-          var loaded = JSON.parse(res.value);
-          state = Object.assign({}, state, loaded);
-          if(!state.scenarios) state.scenarios = { ev:false, pool:false, wfh:false, solar:false };
-          setUsageMode(state.usageMode);
-          renderMonthsGrid();
-          syncPeakSlider();
-          renderPlans();
-          renderResults();
-          renderScenarioGrid();
-          updateUsageDeltaNote();
-          if(!silent) status.textContent = 'Loaded your saved setup.';
-        }catch(e){ if(!silent) status.textContent = 'Could not read saved data.'; }
-      } else if(!silent){ status.textContent = 'Nothing saved yet.'; }
-    }).catch(function(){ if(!silent) status.textContent = 'Nothing saved yet.'; });
+    if(!storageAvailable()){ if(!silent) status.textContent = 'Your browser is blocking local storage (common in private/incognito mode) — nothing to load.'; return; }
+    var raw;
+    try{ raw = window.localStorage.getItem(STORAGE_KEY); }
+    catch(e){ if(!silent) status.textContent = 'Could not read saved data.'; return; }
+
+    if(!raw){ if(!silent) status.textContent = 'Nothing saved yet on this browser.'; return; }
+
+    try{
+      var loaded = JSON.parse(raw);
+      state = Object.assign({}, state, loaded);
+      if(!state.scenarios) state.scenarios = { ev:false, pool:false, wfh:false, solar:false };
+      setUsageMode(state.usageMode);
+      renderMonthsGrid();
+      syncPeakSlider();
+      renderPlans();
+      renderResults();
+      renderScenarioGrid();
+      updateUsageDeltaNote();
+      if(!silent) status.textContent = 'Loaded your saved setup from this browser.';
+    }catch(e){
+      if(!silent) status.textContent = 'Could not read saved data.';
+    }
   }
 
   function syncPeakSlider(){
