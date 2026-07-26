@@ -295,8 +295,12 @@ app.post('/api/bill-scan', async (req, res) => {
     try {
       parsed = extractJson(text);
     } catch (parseErr) {
-      console.error('Could not parse bill-scan output as JSON:', text);
-      return res.status(502).json({ error: 'Could not read that bill clearly. Try a sharper photo or a different page of the bill.', raw: text });
+      // Deliberately not logging or returning the raw model output here: a real
+      // utility bill can show a name, address, and account number, and this text
+      // is derived directly from that photo. Log only that a failure happened,
+      // never the content itself.
+      console.error('Could not parse bill-scan output as JSON (length: ' + text.length + ' chars).');
+      return res.status(502).json({ error: 'Could not read that bill clearly. Try a sharper photo or a different page of the bill.' });
     }
 
     res.json(parsed);
