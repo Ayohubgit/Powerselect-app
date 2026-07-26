@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Privacy Policy — MyRateDial</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+:root{
+  --ink:#1B2430; --ink-soft:#3A4453; --paper:#F7F5F0; --brass-dark:#B87F26; --line: rgba(27,36,48,0.14); --card:#FFFFFF;
+}
+*{box-sizing:border-box;}
+body{ margin:0; background:var(--paper); color:var(--ink); font-family:'Inter',sans-serif; padding:28px 20px 60px; }
+.wrap{ max-width:760px; margin:0 auto; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:36px 40px; }
+a{ color:var(--brass-dark); }
+h1{ font-family:'Roboto Slab',serif; font-size:28px; margin:0 0 4px; }
+.updated{ font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#8A8F98; margin:0 0 28px; }
+h2{ font-family:'Roboto Slab',serif; font-size:17px; margin:28px 0 8px; border-top:1px solid var(--line); padding-top:20px; }
+h2:first-of-type{ border-top:none; padding-top:0; }
+p, li{ font-size:14.5px; line-height:1.65; color:var(--ink-soft); }
+ul{ padding-left:20px; }
+.back-link{ display:inline-block; margin-bottom:18px; font-family:'IBM Plex Mono',monospace; font-size:12px; }
+.note{ background:var(--paper); border:1px solid var(--line); border-radius:8px; padding:12px 16px; font-size:13px; margin-top:8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back-link" href="/">← Back to MyRateDial</a>
+  <h1>Privacy Policy</h1>
+  <p class="updated">Last updated: July 2026</p>
+
+  <p>This page explains, plainly, what MyRateDial does with your data. It's a small,
+  independently-run tool, and this policy describes exactly what happens — nothing more.</p>
+
+  <h2>What we collect</h2>
+  <ul>
+    <li><strong>Usage figures you type in</strong> (monthly kWh, seasonal breakdown, peak-hour share) — used only to calculate estimated costs, and not sent anywhere except to the calculation running in your own browser.</li>
+    <li><strong>Plan details you enter</strong> for comparison (rates, fees, contract terms) — same as above, calculated locally in your browser.</li>
+    <li><strong>ZIP codes</strong>, if you use the "Find plans in your area" search — sent to our server, which uses it to run a search via Anthropic's Claude API for electricity providers in that area.</li>
+    <li><strong>Bill photos or PDFs</strong>, if you use the bill-scan feature — sent to our server and then to Anthropic's API to extract usage figures. A real utility bill often shows a name, address, and account number; be aware of that before uploading one, especially if you'd rather not share it. We do not ask the AI to extract or return your name, address, or account number — only usage numbers — but since the image itself is shared with a third party for processing, treat this the way you would any document upload to an AI tool.</li>
+    <li><strong>Your IP address</strong>, temporarily — used only to apply a fair-use rate limit so one visitor can't use up the shared search budget. It's held in server memory, not written to a database, and is automatically cleared on a rolling basis (never kept longer than about an hour).</li>
+  </ul>
+
+  <h2>What we don't collect</h2>
+  <ul>
+    <li>No accounts, no sign-up, no email or name collection anywhere in the app.</li>
+    <li>No cookies, no analytics or tracking scripts, no advertising identifiers.</li>
+    <li>No persistent database of anything you enter — usage numbers, plans, and bill uploads exist only for the length of your session in your browser.</li>
+  </ul>
+
+  <h2>Third parties involved</h2>
+  <p>ZIP searches and bill scans are processed using <strong>Anthropic's Claude API</strong>. Anthropic does not use API inputs or outputs to train its models, and API request logs are automatically deleted on Anthropic's side after a short retention window (7 days, per Anthropic's standard terms at the time of writing). We don't control Anthropic's systems directly — this description reflects Anthropic's published terms as of this policy's last update, and you can review Anthropic's own privacy documentation at
+  <a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener">anthropic.com/legal/privacy</a> for the current version.</p>
+
+  <h2>How long we keep things</h2>
+  <ul>
+    <li><strong>ZIP search results</strong> are cached on our server for up to 24 hours so repeat searches for the same area don't require a fresh lookup. This cache holds general market/plan information tied to a ZIP code, not to any individual person.</li>
+    <li><strong>Bill photos</strong> are sent for processing and are not saved to any disk or database on our end — once your result comes back, the image isn't retained by our server.</li>
+    <li><strong>IP addresses</strong> used for rate limiting are cleared automatically on a rolling basis and are never written to persistent storage.</li>
+  </ul>
+
+  <h2>Your rights</h2>
+  <p>Because nothing you enter is stored in an account or database on our side, there is generally nothing to request access to or deletion of beyond the short-lived items described above. If you have any concern about data you've shared with the app — including a bill photo — you're welcome to reach out using the contact details below, and we'll look into it in good faith.</p>
+
+  <h2>Where this data goes</h2>
+  <p>Because Anthropic's infrastructure is used for ZIP search and bill scanning, relevant data may be processed on servers located in the United States, regardless of where you're accessing MyRateDial from.</p>
+
+  <h2>Changes to this policy</h2>
+  <p>If what this app collects or how it's processed changes — for example, if accounts, payments, or advertising are added in the future — this page will be updated to reflect that before the change goes live, and the "last updated" date above will change accordingly.</p>
+
+  <h2>Contact</h2>
+  <div class="note">Replace this with a real contact email before publishing — e.g. <em>privacy@myratedial.com</em> or your personal email, whichever you're comfortable listing.</div>
+
+  <h2>A note on accuracy</h2>
+  <p>This tool estimates electricity costs based on numbers you provide and information found via web search — it is not affiliated with any utility or electricity provider, and all figures should be independently confirmed before you make a switching decision.</p>
+</div>
+</body>
+</html>
