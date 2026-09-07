@@ -162,9 +162,10 @@ app.post('/api/zip-search', async (req, res) => {
     );
 
     const controller = new AbortController();
-    // Stay comfortably under typical proxy/host timeouts (Render's free tier can
-    // close slow connections) while still giving the web-search-backed call room to finish.
-    const timeoutId = setTimeout(() => controller.abort(), 45000);
+    // Render's platform allows responses to take much longer than this, so the
+    // real constraint is just giving a live web-search-backed answer enough room
+    // to actually finish before we give up on it.
+    const timeoutId = setTimeout(() => controller.abort(), 90000);
 
     let upstream;
     try {
