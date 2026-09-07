@@ -288,7 +288,7 @@ input[type="range"]{width:100%; accent-color:var(--brass-dark);}
 .save-status{font-family:'IBM Plex Mono',monospace; font-size:11px; color:#8A8F98;}
 
 /* ---------- Results ---------- */
-.results-section{margin-top:26px;}
+.results-section{margin-top:22px;}
 .results-top{
   display:grid; grid-template-columns: 260px 1fr; gap:24px; align-items:center;
   background:var(--ink); color:var(--paper);
@@ -381,65 +381,67 @@ footer.foot{
   </div>
 
   <div class="grid">
-    <!-- USAGE PANEL -->
-    <div class="panel">
-      <p class="panel-title"><span class="num">2</span> Your usage profile</p>
+    <!-- LEFT COLUMN: usage profile, then results stacked directly beneath it -->
+    <div>
+      <div class="panel">
+        <p class="panel-title"><span class="num">2</span> Your usage profile</p>
 
-      <label class="field-label">Usage pattern</label>
-      <div class="pillrow" id="usageModePills">
-        <div class="pill active" data-mode="flat">Same every month</div>
-        <div class="pill" data-mode="seasonal">Varies by season</div>
-      </div>
-
-      <div style="margin-top:14px; padding-top:12px; border-top:1px dashed var(--line);">
-        <label class="field-label" style="margin-top:0;">Or scan a bill photo</label>
-        <div class="bill-upload-row">
-          <input type="file" id="billFileInput" accept="image/png,image/jpeg,image/webp,application/pdf">
-          <button class="btn primary" id="billScanBtn" style="white-space:nowrap;">Scan bill</button>
+        <label class="field-label">Usage pattern</label>
+        <div class="pillrow" id="usageModePills">
+          <div class="pill active" data-mode="flat">Same every month</div>
+          <div class="pill" data-mode="seasonal">Varies by season</div>
         </div>
-        <p class="hint">Upload a clear photo or PDF of a utility bill — MyRateDial will try to read your usage straight off it.</p>
-        <div class="bill-scan-result" id="billScanResult"></div>
-      </div>
 
-      <div id="flatUsageBlock">
-        <label class="field-label">Average monthly usage (kWh)</label>
-        <input type="number" id="flatUsage" value="1000" min="0" step="10">
-        <p class="hint">Check a recent bill — average U.S. homes use roughly 700–1200 kWh/month, but yours may differ a lot.</p>
-      </div>
+        <div style="margin-top:14px; padding-top:12px; border-top:1px dashed var(--line);">
+          <label class="field-label" style="margin-top:0;">Or scan a bill photo</label>
+          <div class="bill-upload-row">
+            <input type="file" id="billFileInput" accept="image/png,image/jpeg,image/webp,application/pdf">
+            <button class="btn primary" id="billScanBtn" style="white-space:nowrap;">Scan bill</button>
+          </div>
+          <p class="hint">Upload a clear photo or PDF of a utility bill — MyRateDial will try to read your usage straight off it.</p>
+          <div class="bill-scan-result" id="billScanResult"></div>
+        </div>
 
-      <div id="seasonalUsageBlock" style="display:none;">
-        <label class="field-label">Monthly usage (kWh) — Jan → Dec</label>
-        <div class="months" id="monthsGrid"></div>
-        <div class="pillrow" style="margin-top:10px;">
-          <div class="pill" data-preset="ac">Preset: hot summers (AC)</div>
-          <div class="pill" data-preset="heat">Preset: cold winters (heat)</div>
-          <div class="pill" data-preset="mild">Preset: mild, low swing</div>
+        <div id="flatUsageBlock">
+          <label class="field-label">Average monthly usage (kWh)</label>
+          <input type="number" id="flatUsage" value="1000" min="0" step="10">
+          <p class="hint">Check a recent bill — average U.S. homes use roughly 700–1200 kWh/month, but yours may differ a lot.</p>
+        </div>
+
+        <div id="seasonalUsageBlock" style="display:none;">
+          <label class="field-label">Monthly usage (kWh) — Jan → Dec</label>
+          <div class="months" id="monthsGrid"></div>
+          <div class="pillrow" style="margin-top:10px;">
+            <div class="pill" data-preset="ac">Preset: hot summers (AC)</div>
+            <div class="pill" data-preset="heat">Preset: cold winters (heat)</div>
+            <div class="pill" data-preset="mild">Preset: mild, low swing</div>
+          </div>
+        </div>
+
+        <label class="field-label">Share of usage during peak hours</label>
+        <div class="slider-wrap">
+          <input type="range" id="peakShare" min="0" max="100" value="30">
+          <div class="slider-val"><span id="peakShareVal">30</span>% during peak / <span id="offPeakShareVal">70</span>% off-peak</div>
+        </div>
+        <p class="hint">Only matters for time-of-use plans. Higher if you run AC, laundry, or EV charging during afternoon/evening peak windows.</p>
+
+        <div style="margin-top:16px; padding-top:14px; border-top:1px dashed var(--line);">
+          <label class="field-label" style="margin-top:0;">Model a future change</label>
+          <div class="scenario-grid" id="scenarioGrid"></div>
+          <div class="usage-delta-note" id="usageDeltaNote"></div>
         </div>
       </div>
 
-      <label class="field-label">Share of usage during peak hours</label>
-      <div class="slider-wrap">
-        <input type="range" id="peakShare" min="0" max="100" value="30">
-        <div class="slider-val"><span id="peakShareVal">30</span>% during peak / <span id="offPeakShareVal">70</span>% off-peak</div>
-      </div>
-      <p class="hint">Only matters for time-of-use plans. Higher if you run AC, laundry, or EV charging during afternoon/evening peak windows.</p>
-
-      <div style="margin-top:16px; padding-top:14px; border-top:1px dashed var(--line);">
-        <label class="field-label" style="margin-top:0;">Model a future change</label>
-        <div class="scenario-grid" id="scenarioGrid"></div>
-        <div class="usage-delta-note" id="usageDeltaNote"></div>
-      </div>
+      <div class="results-section" id="resultsSection"></div>
     </div>
 
-    <!-- PLANS PANEL -->
+    <!-- PLANS PANEL (right column) -->
     <div class="panel">
       <p class="panel-title"><span class="num">3</span> Plans you're comparing</p>
       <div id="plansContainer"></div>
       <button class="add-plan-btn" id="addPlanBtn">+ Add a plan</button>
     </div>
   </div>
-
-  <div class="results-section" id="resultsSection"></div>
 
   <div class="tips-section">
     <p class="panel-title" style="border:none; padding:0;"><span class="num">i</span> What each plan type actually means</p>
