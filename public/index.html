@@ -615,6 +615,7 @@ footer.foot{
       input.addEventListener('input', function(){
         state.monthsUsage[idx] = Number(input.value)||0;
         updateUsageDeltaNote();
+        scheduleRecalc();
       });
       wrap.appendChild(label); wrap.appendChild(input);
       grid.appendChild(wrap);
@@ -748,17 +749,19 @@ footer.foot{
         plan.type = e.target.value;
         card.querySelector('.type-fields').innerHTML = typeFieldsHTML(plan);
         wireTypeFields(card, plan);
+        scheduleRecalc();
       });
       card.querySelector('.remove-btn').addEventListener('click', function(){
         state.plans = state.plans.filter(function(p){ return p.id !== plan.id; });
         renderPlans();
+        renderResults();
       });
-      card.querySelector('.f-fee').addEventListener('input', function(e){ plan.monthlyFee = Number(e.target.value)||0; });
-      card.querySelector('.f-contract').addEventListener('input', function(e){ plan.contractMonths = Number(e.target.value)||0; });
-      card.querySelector('.f-etf').addEventListener('input', function(e){ plan.etf = Number(e.target.value)||0; });
-      card.querySelector('.f-renew').addEventListener('input', function(e){ plan.renewablePercent = Number(e.target.value)||0; });
-      card.querySelector('.f-credit-threshold').addEventListener('input', function(e){ plan.creditThreshold = Number(e.target.value)||0; });
-      card.querySelector('.f-credit-amount').addEventListener('input', function(e){ plan.creditAmount = Number(e.target.value)||0; });
+      card.querySelector('.f-fee').addEventListener('input', function(e){ plan.monthlyFee = Number(e.target.value)||0; scheduleRecalc(); });
+      card.querySelector('.f-contract').addEventListener('input', function(e){ plan.contractMonths = Number(e.target.value)||0; scheduleRecalc(); });
+      card.querySelector('.f-etf').addEventListener('input', function(e){ plan.etf = Number(e.target.value)||0; scheduleRecalc(); });
+      card.querySelector('.f-renew').addEventListener('input', function(e){ plan.renewablePercent = Number(e.target.value)||0; scheduleRecalc(); });
+      card.querySelector('.f-credit-threshold').addEventListener('input', function(e){ plan.creditThreshold = Number(e.target.value)||0; scheduleRecalc(); });
+      card.querySelector('.f-credit-amount').addEventListener('input', function(e){ plan.creditAmount = Number(e.target.value)||0; scheduleRecalc(); });
       card.querySelector('.f-is-current').addEventListener('change', function(e){
         state.currentPlanId = e.target.checked ? plan.id : null;
         renderPlans();
@@ -766,7 +769,7 @@ footer.foot{
       });
       var monthsRemainingInput = card.querySelector('.f-months-remaining');
       if(monthsRemainingInput){
-        monthsRemainingInput.addEventListener('input', function(e){ plan.monthsRemaining = Number(e.target.value)||0; });
+        monthsRemainingInput.addEventListener('input', function(e){ plan.monthsRemaining = Number(e.target.value)||0; scheduleRecalc(); });
       }
       wireTypeFields(card, plan);
     });
@@ -774,16 +777,17 @@ footer.foot{
 
   function wireTypeFields(card, plan){
     var rate = card.querySelector('.f-rate');
-    if(rate) rate.addEventListener('input', function(e){ plan.fixedRate = Number(e.target.value)||0; });
+    if(rate) rate.addEventListener('input', function(e){ plan.fixedRate = Number(e.target.value)||0; scheduleRecalc(); });
     var peak = card.querySelector('.f-peak');
-    if(peak) peak.addEventListener('input', function(e){ plan.peakRate = Number(e.target.value)||0; });
+    if(peak) peak.addEventListener('input', function(e){ plan.peakRate = Number(e.target.value)||0; scheduleRecalc(); });
     var offpeak = card.querySelector('.f-offpeak');
-    if(offpeak) offpeak.addEventListener('input', function(e){ plan.offPeakRate = Number(e.target.value)||0; });
+    if(offpeak) offpeak.addEventListener('input', function(e){ plan.offPeakRate = Number(e.target.value)||0; scheduleRecalc(); });
     var tierLimits = card.querySelectorAll('.tier-limit');
     tierLimits.forEach(function(inp){
       inp.addEventListener('input', function(e){
         var i = Number(e.target.dataset.tier);
         plan.tiers[i].limit = e.target.value === '' ? null : Number(e.target.value);
+        scheduleRecalc();
       });
     });
     var tierRates = card.querySelectorAll('.tier-rate');
@@ -791,11 +795,21 @@ footer.foot{
       inp.addEventListener('input', function(e){
         var i = Number(e.target.dataset.tier);
         plan.tiers[i].rate = Number(e.target.value)||0;
+        scheduleRecalc();
       });
     });
   }
 
   // ---------- Results rendering ----------
+  var recalcTimer = null;
+  function scheduleRecalc(){
+    // Small debounce so rapid typing (e.g. entering a rate digit by digit)
+    // doesn't recalculate on every single keystroke — just settles a moment
+    // after you stop, so results update live without any button needed.
+    clearTimeout(recalcTimer);
+    recalcTimer = setTimeout(renderResults, 150);
+  }
+
   function fmtMoney(n){
     return '$' + n.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0});
   }
@@ -1140,6 +1154,7 @@ footer.foot{
     document.getElementById('flatUsage').addEventListener('input', function(e){
       state.flatUsage = Number(e.target.value)||0;
       updateUsageDeltaNote();
+      scheduleRecalc();
     });
 
     document.getElementById('billScanBtn').addEventListener('click', scanBillPhoto);
@@ -1163,11 +1178,13 @@ footer.foot{
     document.getElementById('peakShare').addEventListener('input', function(e){
       state.peakSharePct = Number(e.target.value);
       syncPeakSlider();
+      scheduleRecalc();
     });
 
     document.getElementById('addPlanBtn').addEventListener('click', function(){
       state.plans.push(defaultPlan('fixed'));
       renderPlans();
+      renderResults();
     });
 
     document.getElementById('zipSearchBtn').addEventListener('click', searchByZip);
