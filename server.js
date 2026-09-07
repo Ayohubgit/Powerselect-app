@@ -251,7 +251,7 @@ app.post('/api/bill-scan', async (req, res) => {
       : { type: 'image', source: { type: 'base64', media_type: mediaType, data: imageBase64 } };
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 45000);
+    const timeoutId = setTimeout(() => controller.abort(), 90000);
 
     let upstream;
     try {
