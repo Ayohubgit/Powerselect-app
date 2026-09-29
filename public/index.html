@@ -312,6 +312,13 @@ input[type="range"]{width:100%; accent-color:var(--brass-dark);}
 .winner-meta{display:flex; gap:18px; margin-top:14px; flex-wrap:wrap;}
 .winner-meta div{font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#C7CCD6;}
 .winner-meta b{color:var(--paper); display:block; font-size:15px; font-family:'Inter',sans-serif; font-weight:600;}
+.winner-signup-btn{
+  display:inline-block; margin-top:16px; padding:10px 18px; border-radius:7px;
+  background:var(--brass); color:var(--ink); font-family:'IBM Plex Mono',monospace;
+  font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.03em;
+  text-decoration:none;
+}
+.winner-signup-btn:hover{background:#fff;}
 
 .rank-list{display:flex; flex-direction:column; gap:10px;}
 .rank-row{
@@ -327,6 +334,16 @@ input[type="range"]{width:100%; accent-color:var(--brass-dark);}
 .rank-row.is-winner .bar-fill{background:var(--teal);}
 .rank-cost{font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:15px; text-align:right; white-space:nowrap;}
 .rank-cost .permo{display:block; font-size:10.5px; font-weight:400; color:#8A8F98;}
+.rank-signup-link{
+  display:inline-block; margin-top:4px; font-family:'IBM Plex Mono',monospace; font-size:10.5px;
+  font-weight:600; color:var(--brass-dark); text-decoration:none; border-bottom:1px solid var(--brass-dark);
+}
+.rank-signup-link:hover{color:var(--rust); border-color:var(--rust);}
+
+.affiliate-disclosure{
+  font-size:11px; color:#8A8F98; font-family:'IBM Plex Mono',monospace; line-height:1.5;
+  margin-top:10px; padding-top:10px; border-top:1px dashed var(--line);
+}
 
 .empty-state{
   text-align:center; padding:40px 20px; color:var(--ink-soft);
@@ -505,7 +522,8 @@ footer.foot{
       peakRate: 0.24,
       offPeakRate: 0.09,
       creditThreshold: 0,
-      creditAmount: 0
+      creditAmount: 0,
+      signupUrl: ''
     };
     return base;
   }
@@ -726,6 +744,9 @@ footer.foot{
           '<div class="row2"><input type="number" min="0" class="f-credit-threshold" value="'+plan.creditThreshold+'" placeholder="threshold"><input type="number" min="0" step="0.5" class="f-credit-amount" value="'+plan.creditAmount+'" placeholder="credit $"></div>' +
         '</div>' +
       '</div>' +
+      '<label class="field-label">Sign-up link (optional — your affiliate/referral link for this plan)</label>' +
+      '<input type="text" class="f-signup-url" value="'+escapeAttr(plan.signupUrl||'')+'" placeholder="https://provider.com/signup?ref=...">' +
+      '<p class="hint">Leave blank until you have a real tracking link — a "Sign up" button only appears in results once this is filled in.</p>' +
       (plan.sourceNote ? '<p class="hint" style="margin-top:10px;">' + escapeHtml(plan.sourceNote) + '</p>' : '') +
     '</div>';
   }
@@ -762,6 +783,7 @@ footer.foot{
       card.querySelector('.f-renew').addEventListener('input', function(e){ plan.renewablePercent = Number(e.target.value)||0; scheduleRecalc(); });
       card.querySelector('.f-credit-threshold').addEventListener('input', function(e){ plan.creditThreshold = Number(e.target.value)||0; scheduleRecalc(); });
       card.querySelector('.f-credit-amount').addEventListener('input', function(e){ plan.creditAmount = Number(e.target.value)||0; scheduleRecalc(); });
+      card.querySelector('.f-signup-url').addEventListener('input', function(e){ plan.signupUrl = e.target.value.trim(); scheduleRecalc(); });
       card.querySelector('.f-is-current').addEventListener('change', function(e){
         state.currentPlanId = e.target.checked ? plan.id : null;
         renderPlans();
@@ -832,6 +854,13 @@ footer.foot{
     return '<div class="breakeven-line breakeven-good">Saves ' + fmtMoney(monthlySavings) + '/mo — pays off the ' + fmtMoney(etf) + ' early termination fee in about ' + Math.ceil(months) + ' month' + (Math.ceil(months)===1?'':'s') + '.</div>';
   }
 
+  function escapeAttrUrl(s){
+    // Basic safety net for the href — only allow http(s) links, strip anything else.
+    var str = String(s||'').trim();
+    if(!/^https?:\/\//i.test(str)) return '';
+    return str.replace(/"/g,'%22');
+  }
+
   function renderResults(){
     var section = document.getElementById('resultsSection');
     if(state.plans.length === 0){
@@ -851,6 +880,8 @@ footer.foot{
     var currentPlan = state.currentPlanId ? state.plans.find(function(p){ return p.id === state.currentPlanId; }) : null;
     var currentAnnual = currentPlan ? planAnnualCost(currentPlan) : null;
 
+    var anyoneHasSignupLink = state.plans.some(function(p){ return escapeAttrUrl(p.signupUrl); });
+
     var html = '';
     html += '<p class="panel-title" style="border:none; padding:0;"><span class="num">4</span> Estimated results</p>';
     html += '<div class="results-top">';
@@ -865,6 +896,10 @@ footer.foot{
     html += '      <div>Early term. fee<b>' + (winner.plan.etf ? fmtMoney(winner.plan.etf) : '—') + '</b></div>';
     html += '      <div>Renewable<b>' + winner.plan.renewablePercent + '%</b></div>';
     html += '    </div>';
+    var winnerSignup = escapeAttrUrl(winner.plan.signupUrl);
+    if(winnerSignup){
+      html += '    <a class="winner-signup-btn" href="'+winnerSignup+'" target="_blank" rel="noopener sponsored">Sign up for this plan →</a>';
+    }
     html += '  </div>';
     html += '</div>';
 
@@ -873,16 +908,22 @@ footer.foot{
       var isWinner = idx === 0;
       var isCurrent = currentPlan && c.plan.id === currentPlan.id;
       var widthPct = Math.max(4, (c.annual / maxCost) * 100);
+      var signupUrl = escapeAttrUrl(c.plan.signupUrl);
       html += '<div class="rank-row' + (isWinner?' is-winner':'') + '">';
       html += '  <div class="rank-num">' + (idx+1) + '</div>';
       html += '  <div><div class="rank-name">' + escapeHtml(c.plan.name) + (isCurrent ? ' <span class="current-tag">Your current plan</span>' : '') + '</div><div class="rank-tags">' + planTagLine(c.plan) + '</div>' +
         (currentPlan ? breakEvenLine(c.plan, c.annual, currentPlan, currentAnnual) : '') +
+        (signupUrl ? '<a class="rank-signup-link" href="'+signupUrl+'" target="_blank" rel="noopener sponsored">Sign up →</a>' : '') +
         '</div>';
       html += '  <div class="bar-track"><div class="bar-fill" style="width:' + widthPct + '%;"></div></div>';
       html += '  <div class="rank-cost">' + fmtMoney(c.annual) + '<span class="permo">' + fmtMoney2(c.annual/12) + '/mo avg</span></div>';
       html += '</div>';
     });
     html += '</div>';
+
+    if(anyoneHasSignupLink){
+      html += '<div class="affiliate-disclosure">Some "Sign up" links above may be affiliate/referral links — MyRateDial may earn a commission if you sign up through one, at no extra cost to you. This never affects how plans are ranked or which one is shown as the best estimated cost.</div>';
+    }
 
     section.innerHTML = html;
   }
