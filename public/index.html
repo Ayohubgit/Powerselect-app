@@ -991,6 +991,7 @@ footer.foot{
     p.etf = Number(raw.etf)||0;
     p.renewablePercent = Number(raw.renewablePercent)||0;
     if(raw.sourceNote) p.sourceNote = raw.sourceNote;
+    if(raw.signupUrl) p.signupUrl = raw.signupUrl;
     if(p.type === 'fixed' || p.type === 'indexed'){
       p.fixedRate = Number(raw.estimatedRate)||0;
     } else if(p.type === 'tou'){
