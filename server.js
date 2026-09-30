@@ -1,6 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 app.set('trust proxy', true); // needed so req.ip reflects the real visitor, not Render's proxy
@@ -12,6 +14,54 @@ const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 if (!ANTHROPIC_API_KEY) {
   console.warn('WARNING: ANTHROPIC_API_KEY is not set. /api/zip-search will fail until it is.');
 }
+
+// ---------- Affiliate link lookup ----------
+// A small, separate JSON file mapping a provider's company name to your real
+// affiliate/referral link. Add a new provider by editing affiliate-links.json
+// alone — no need to touch this file or the front-end at all.
+// Keys are matched case-insensitively and with extra whitespace collapsed.
+
+const AFFILIATE_LINKS_PATH = path.join(__dirname, 'affiliate-links.json');
+let affiliateLinks = {};
+
+function loadAffiliateLinks() {
+  try {
+    const raw = fs.readFileSync(AFFILIATE_LINKS_PATH, 'utf8');
+    const parsed = JSON.parse(raw);
+    const normalized = {};
+    for (const key of Object.keys(parsed)) {
+      if (key.startsWith('_')) continue; // treat underscore-prefixed keys as comments/metadata, not real entries
+      normalized[normalizeCompanyName(key)] = parsed[key];
+    }
+    affiliateLinks = normalized;
+    console.log('Loaded ' + Object.keys(affiliateLinks).length + ' affiliate link(s) from affiliate-links.json');
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      console.warn('affiliate-links.json not found — no affiliate links will be auto-attached. This is fine if you have none yet.');
+    } else {
+      console.error('Could not read/parse affiliate-links.json — check it is valid JSON.', err.message);
+    }
+    affiliateLinks = {};
+  }
+}
+
+function normalizeCompanyName(name) {
+  return String(name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function attachAffiliateLinks(plans) {
+  if (!Array.isArray(plans)) return plans;
+  return plans.map((plan) => {
+    const key = normalizeCompanyName(plan.company || plan.name);
+    const link = affiliateLinks[key];
+    if (link) {
+      return Object.assign({}, plan, { signupUrl: link });
+    }
+    return plan;
+  });
+}
+
+loadAffiliateLinks();
 
 function buildPrompt(zip, avgMonthly, peakSharePct) {
   return 'A homeowner in ZIP code ' + zip + ' (USA) wants to compare residential electricity plans. ' +
@@ -143,7 +193,10 @@ app.post('/api/zip-search', async (req, res) => {
     // doesn't touch the rate limit since no API call happens.
     const cached = getCachedZipResult(zip);
     if (cached) {
-      return res.json(Object.assign({}, cached, { fromCache: true }));
+      return res.json(Object.assign({}, cached, {
+        plans: attachAffiliateLinks(cached.plans),
+        fromCache: true
+      }));
     }
 
     const clientIp = req.ip || 'unknown';
@@ -210,11 +263,14 @@ app.post('/api/zip-search', async (req, res) => {
       parsed = extractJson(text);
     } catch (parseErr) {
       console.error('Could not parse model output as JSON:', text);
-      return res.status(502).json({ error: 'Could not parse a clean result from the model.', raw: text });
+      return res.status(502).json({ error: 'Could not parse a clean result from the model.' });
     }
 
     setCachedZipResult(zip, parsed);
-    res.json(Object.assign({}, parsed, { fromCache: false }));
+    res.json(Object.assign({}, parsed, {
+      plans: attachAffiliateLinks(parsed.plans),
+      fromCache: false
+    }));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message || 'Unexpected server error' });
@@ -320,7 +376,8 @@ app.get('/api/health', (req, res) => {
     hasApiKey: !!ANTHROPIC_API_KEY,
     zipSearchesToday: countToday,
     dailyLimit: GLOBAL_DAILY_LIMIT,
-    zipCacheEntries: zipCache.size
+    zipCacheEntries: zipCache.size,
+    affiliateLinksLoaded: Object.keys(affiliateLinks).length
   });
 });
 
