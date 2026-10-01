@@ -1003,6 +1003,33 @@ footer.foot{
     return p;
   }
 
+  var zipSearchProgressTimer = null;
+  var zipSearchMessages = [
+    'Checking whether your area lets you choose a provider…',
+    'Searching for real plans in this ZIP…',
+    'Comparing rates across providers…',
+    'Double-checking contract terms and fees…',
+    'Almost there — finalizing results…'
+  ];
+
+  function startZipSearchProgress(zip){
+    var status = document.getElementById('zipStatus');
+    var startTime = Date.now();
+    var msgIndex = 0;
+    status.textContent = zipSearchMessages[0] + ' (0s)';
+    zipSearchProgressTimer = setInterval(function(){
+      var elapsed = Math.round((Date.now() - startTime) / 1000);
+      // Advance to the next message roughly every 12 seconds, without repeating past the last one
+      var targetIndex = Math.min(zipSearchMessages.length - 1, Math.floor(elapsed / 12));
+      if(targetIndex !== msgIndex) msgIndex = targetIndex;
+      status.textContent = zipSearchMessages[msgIndex] + ' (' + elapsed + 's — real web search takes a moment, thanks for waiting)';
+    }, 1000);
+  }
+
+  function stopZipSearchProgress(){
+    if(zipSearchProgressTimer){ clearInterval(zipSearchProgressTimer); zipSearchProgressTimer = null; }
+  }
+
   function searchByZip(){
     var zip = document.getElementById('zipInput').value.trim();
     var status = document.getElementById('zipStatus');
@@ -1011,8 +1038,8 @@ footer.foot{
 
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span>Searching…';
-    status.textContent = 'Looking up providers for ' + zip + ' — this can take up to a minute.';
     document.getElementById('marketBanner').className = 'market-banner';
+    startZipSearchProgress(zip);
 
     var usageArr = getUsageArray();
     var avgMonthly = Math.round(usageArr.reduce(function(a,b){return a+b;},0) / 12);
@@ -1025,6 +1052,7 @@ footer.foot{
         return res.json().then(function(body){ return { ok: res.ok, body: body }; });
       })
       .then(function(result){
+        stopZipSearchProgress();
         if(!result.ok){
           status.textContent = (result.body && result.body.error) ? result.body.error : 'Search failed — try again.';
           btn.disabled = false; btn.textContent = 'Search providers';
@@ -1045,6 +1073,7 @@ footer.foot{
         btn.disabled = false; btn.textContent = 'Search providers';
       })
       .catch(function(){
+        stopZipSearchProgress();
         status.textContent = 'Search failed — check your connection and that the server is running, then try again.';
         btn.disabled = false; btn.textContent = 'Search providers';
       });
